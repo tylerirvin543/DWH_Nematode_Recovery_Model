@@ -1,0 +1,17 @@
+# RStudio / R project files
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# Posit Assistant local metadata (defensive; plans actually live outside the repo,
+# but keep this in case any local assistant folder ever appears here)
+.posit/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Raw data placeholders should track; large raw data dumps should not by default
+# (uncomment/add specific large-file patterns here once the dataset arrives)
