@@ -17,7 +17,7 @@ The full write-up, including the equations used, is in `nematode_recovery_report
 - [x] Project pitch and proposal
 - [x] Dataset received and cleaned
 - [x] Ordination, PERMANOVA, distance to controls, supporting plots, SIMPER and colonizer check
-- [ ] Custom model fitted by maximum likelihood or Bayesian inference (course requirement, see report)
+- [x] Custom model fitted by maximum likelihood (beta-binomial model of the colonizer share)
 - [ ] Later survey data (for example 2023), if it exists and is comparable
 - [ ] Oral presentation
 - [ ] Rough draft
@@ -50,6 +50,7 @@ Run these from the project root (open `Group Project.Rproj`), in order.
 | `03_distance_to_control.R` | Distance of impacted stations to controls, control background, mixed model of change per year |
 | `04_extra_plots.R` | Environmental PCA, family composition bars, MI and ITD plot, site map |
 | `05_simper.R` | SIMPER for HI versus NI, colonizer and persister (c-p) comparison |
+| `06_colonizer_model.R` | Hand-written beta-binomial model of the colonizer (c-p 1) share, fitted with `optim`, with profile likelihood intervals |
 
 To rebuild the report after running the scripts, render `nematode_recovery_report.qmd` with Quarto from the project root.
 

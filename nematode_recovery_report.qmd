@@ -34,6 +34,11 @@ pca_var  <- read_csv("outputs/tables/env_pca_variance.csv", show_col_types = FAL
 simper   <- read_csv("outputs/tables/simper_hi_vs_ni.csv", show_col_types = FALSE)
 sfc      <- read_csv("outputs/tables/simper_family_cp.csv", show_col_types = FALSE)
 cp1g     <- read_csv("outputs/tables/cp1_genera_at_hi.csv", show_col_types = FALSE)
+est      <- read_csv("outputs/tables/colonizer_model_estimates.csv", show_col_types = FALSE)
+mfit     <- read_csv("outputs/tables/colonizer_model_fit.csv", show_col_types = FALSE)
+sens     <- read_csv("outputs/tables/colonizer_model_sensitivity.csv", show_col_types = FALSE)
+fitted   <- read_csv("outputs/tables/colonizer_model_fitted.csv", show_col_types = FALSE)
+e_       <- function(prefix) est[startsWith(est$parameter, prefix), ]
 cp_means <- read_csv("outputs/tables/cp_composition_stations.csv", show_col_types = FALSE) |>
   summarise(m = mean(pct), .by = c(year, impact, cp))
 cpv <- function(y, g, k) cp_means$m[cp_means$year == y & cp_means$impact == g & cp_means$cp == k]
@@ -288,9 +293,77 @@ The pattern does fit. Animals with a c-p value of 1 made up about `r sprintf("%.
 
 This also bears on our main question. Between 2010 and 2011 the share of c-p 1 animals at unimpacted stations fell from about `r sprintf("%.0f", cpv(2010, "NI", 1))`% to `r sprintf("%.0f", cpv(2011, "NI", 1))`%, while at heavily impacted stations it stayed near 40%. That is the opposite of what we would expect if the heavily impacted communities were becoming more like the controls, and it agrees with the distance to control results, where the gap did not shrink. With three stations per group and no formal test, we treat this as a description and not a conclusion.
 
+## A model for the colonizer share
+
+So far the colonizer result is a description. We also wanted a model that we write down and fit ourselves, so that the size of the effect and its uncertainty come from a likelihood we can inspect. The colonizer share is a good target because it is the clearest difference between the groups, and because it is naturally a count out of a total: of all the nematodes identified at a station in a year, how many have a c-p value of 1?
+
+For 2011 these counts are in the dataset. For 2010 we only have percentages, so we reconstructed each sample's size by finding the number of animals that turns its percentages into whole numbers (falling back on assuming the rarest taxon was a single animal). The reconstructed sizes are mostly between 90 and 130 animals per layer, although a few samples are much smaller (as few as 45), and the reconstruction is an approximation. To check how much it matters, we refitted the model with every 2010 sample size halved and then doubled.
+
+Let $y_{st}$ be the number of c-p 1 animals at station $s$ in year $t$ (summed over the two layers) out of $n_{st}$ animals in total. A plain binomial model would treat every animal as an independent draw with the same chance $p$ of being a colonizer, but stations of the same impact level clearly differ from one another by more than that. We therefore let each station's true proportion vary around $p_{st}$, which gives the beta binomial distribution:
+
+$$
+y_{st} \sim \text{BetaBinomial}(n_{st}, p_{st}, \kappa), \qquad
+P(y \mid n, p, \kappa) = \binom{n}{y} \frac{B\big(y + p\kappa,\; n - y + (1-p)\kappa\big)}{B\big(p\kappa,\; (1-p)\kappa\big)},
+$$
+
+where $B$ is the beta function. The parameter $\kappa$ controls the extra variation between stations, with small values meaning more variation and very large values reducing the model to the binomial. The mean proportion depends on impact level and year through a logistic regression:
+
+$$
+\text{logit}(p_{st}) = a + b_{HI} \, HI_s + b_{MI} \, MI_s + \big(c + d_{HI} \, HI_s + d_{MI} \, MI_s\big)(t - 2010),
+$$
+
+where $HI_s$ and $MI_s$ are indicators for the impact level of station $s$. Here $a$ is the log odds of colonizers at unimpacted stations in 2010, $b_{HI}$ and $b_{MI}$ are how much higher (or lower) the log odds are at HI and MI stations in 2010, $c$ is the yearly change in log odds at unimpacted stations, and $d_{HI}$ and $d_{MI}$ are how much the yearly change at HI and MI stations differs from that at unimpacted stations. The parameter that speaks most directly to our question is $d_{HI}$. If heavily impacted stations were converging on the controls, their colonizer share would fall relative to the controls and $d_{HI}$ would be negative.
+
+We estimated the seven parameters by maximum likelihood. Writing $\theta$ for all of them, we minimized the negative log likelihood
+
+$$
+-\ell(\theta) = -\sum_{s,t} \log P\big(y_{st} \mid n_{st}, p_{st}(\theta), \kappa\big)
+$$
+
+with `optim` (the BFGS method), using the same approach as in lab. For the uncertainty we used profile likelihood intervals. For a parameter $\theta_j$, the profile likelihood fixes $\theta_j$ at a trial value, re-maximizes the likelihood over all the other parameters, and records the result:
+
+$$
+\ell_p(\theta_j) = \max_{\theta_{-j}} \ell(\theta_j, \theta_{-j}).
+$$
+
+The 95% interval contains every value of $\theta_j$ for which $2\big[\ell(\hat\theta) - \ell_p(\theta_j)\big] \le \chi^2_{1,\,0.95}$, which means the negative log likelihood is no more than about 1.92 above its minimum. Unlike a Wald interval ($\hat\theta \pm 1.96 \, \text{SE}$), this does not assume the likelihood is symmetric, which matters with so few stations. We report log odds and odds ratios $\exp(\theta)$.
+
+```{r colonizer-fit-table}
+mfit |>
+  transmute(Model = model, Parameters = n_parameters, `Negative log likelihood` = neg_log_lik, AIC) |>
+  kable(digits = 1, caption = "Comparison of the beta binomial and plain binomial models. Lower AIC is better.")
+```
+
+The beta binomial model is much better supported than the plain binomial (AIC of `r sprintf("%.0f", mfit$AIC[mfit$model == "Beta-binomial"])` against `r sprintf("%.0f", mfit$AIC[mfit$model == "Binomial"])`), so stations of the same impact level do differ by more than counting error would produce. The estimated $\kappa$ is about `r sprintf("%.0f", sens$kappa[sens$scale_2010_n == 1])`.
+
+```{r colonizer-est-table}
+est |>
+  transmute(
+    Parameter = parameter,
+    Estimate = sprintf("%.2f", estimate),
+    `95% profile interval` = sprintf("%.2f to %.2f", profile_lower, profile_upper),
+    `Odds ratio` = sprintf("%.2f (%.2f to %.2f)", odds_ratio, or_lower, or_upper)
+  ) |>
+  kable(caption = "Maximum likelihood estimates on the log odds scale, with profile likelihood intervals and odds ratios.")
+```
+
+```{r colonizer-profile-fig}
+#| fig-cap: "Profile likelihoods for the 2010 difference between HI and NI stations (left) and for the difference in yearly change (right). The 95% interval is where the curve lies below the dashed line."
+include_graphics("outputs/figures/colonizer_profiles.png")
+```
+
+```{r colonizer-fit-fig}
+#| fig-cap: "Observed colonizer proportions at each station and the fitted group means from the beta binomial model."
+include_graphics("outputs/figures/colonizer_fit.png")
+```
+
+In 2010 the odds of a colonizer animal were about `r sprintf("%.1f", e_("bHI")$odds_ratio)` times higher at heavily impacted stations than at unimpacted ones (95% profile interval `r sprintf("%.1f", e_("bHI")$or_lower)` to `r sprintf("%.1f", e_("bHI")$or_upper)`). At unimpacted stations the odds fell sharply over the year, to about `r sprintf("%.2f", e_("c (")$odds_ratio)` of their earlier value (interval `r sprintf("%.2f", e_("c (")$or_lower)` to `r sprintf("%.2f", e_("c (")$or_upper)`), which is a drop in the fitted proportion from about `r sprintf("%.0f", 100 * fitted$p[fitted$impact == "NI" & fitted$year == 2010])`% to `r sprintf("%.0f", 100 * fitted$p[fitted$impact == "NI" & fitted$year == 2011])`%. At heavily impacted stations the fitted proportion barely moved (`r sprintf("%.0f", 100 * fitted$p[fitted$impact == "HI" & fitted$year == 2010])`% to `r sprintf("%.0f", 100 * fitted$p[fitted$impact == "HI" & fitted$year == 2011])`%). The difference in yearly change, $d_{HI}$, is therefore positive (`r sprintf("%.2f", e_("dHI")$estimate)`, profile interval `r sprintf("%.2f", e_("dHI")$profile_lower)` to `r sprintf("%.2f", e_("dHI")$profile_upper)`), and its interval excludes zero. The moderately impacted stations sit in between, but their intervals include zero for both the 2010 difference and the change. The results hardly changed when the reconstructed 2010 sample sizes were halved or doubled ($\hat{d}_{HI}$ stayed between `r sprintf("%.2f", min(sens$dHI))` and `r sprintf("%.2f", max(sens$dHI))`).
+
+The important point is the direction. A positive $d_{HI}$ means the gap between heavily impacted and unimpacted stations in colonizer share widened. It did not widen because the colonizers increased at heavily impacted stations, but because they dropped at the unimpacted ones while staying high at the heavily impacted ones. This is the opposite of convergence, so this model gives no evidence of recovery in the colonizer share by 2011. What it cannot tell us is why the unimpacted stations changed so much. The drop could be a real regional change, but it could equally reflect differences in sampling or identification between the years, and with two years of data we cannot separate the two. The model also rests on 18 observations and seven parameters, treats the animals counted at a station as independent draws given the station's proportion, and uses reconstructed sample sizes for 2010, so the intervals should be read as rough.
+
 ## What the results suggest, and their limits
 
-Oil impacted and unimpacted stations hosted different nematode communities in both years. Between 2010 and 2011 the whole study area shifted in a similar way, including the unimpacted stations, and we did not detect that impacted stations changed differently from the rest or that they moved closer to the controls. The clearest difference in composition was a larger share of colonizer animals at the heavily impacted stations, almost all of them the genus Halomonhystera, which is what we would expect if opportunistic nematodes are favored at oil impacted sites, and that share did not decline over the year. This is consistent with a disturbance effect, but we cannot show that oil caused it, because we have no data from before the spill and impact level is partly tangled with location. These results do not support recovery by 2011, but they also do not show that recovery is absent. A single year is a short time over which to expect it.
+Oil impacted and unimpacted stations hosted different nematode communities in both years. Between 2010 and 2011 the whole study area shifted in a similar way, including the unimpacted stations, and we did not detect that impacted stations changed differently from the rest or that they moved closer to the controls. The clearest difference in composition was a larger share of colonizer animals at the heavily impacted stations, almost all of them the genus Halomonhystera, which is what we would expect if opportunistic nematodes are favored at oil impacted sites, and that share did not decline over the year. A beta binomial model of the colonizer share agrees: the odds of a colonizer animal at heavily impacted stations were about `r sprintf("%.1f", e_("bHI")$odds_ratio)` times those at unimpacted stations in 2010 (95% profile interval `r sprintf("%.1f", e_("bHI")$or_lower)` to `r sprintf("%.1f", e_("bHI")$or_upper)`), and the gap widened over the year. This is consistent with a disturbance effect, but we cannot show that oil caused it, because we have no data from before the spill and impact level is partly tangled with location. These results do not support recovery by 2011, but they also do not show that recovery is absent. A single year is a short time over which to expect it.
 
 The most important limitation is the shift shared by all stations. Because the controls changed as much as the impacted stations, we cannot say whether this reflects a real change across the region or differences between years in how samples were collected, subsampled, or identified. Two years of data cannot separate these explanations. With only three stations per impact level, the tests also have limited power, so a result that is not significant is weak evidence that no difference exists. The permutation tests are coarse, working at the family level hides changes within families, and the distance results rest on twelve observations without adjustment for the number of models fitted, so no single p value there should carry much weight.
 
@@ -310,7 +383,7 @@ clean_log |>
   kable(caption = "Cleaning decisions recorded by scripts/01_data_prep.R.")
 ```
 
-To reproduce the analysis, open `Group Project.Rproj`, run `scripts/01_data_prep.R`, `scripts/02_ordination_permanova.R`, `scripts/03_distance_to_control.R`, `scripts/04_extra_plots.R`, and `scripts/05_simper.R` in order, and render this file from the project folder. The packages used are readxl, dplyr, tidyr, stringr, purrr, readr, ggplot2, vegan, nlme, and knitr.
+To reproduce the analysis, open `Group Project.Rproj`, run `scripts/01_data_prep.R`, `scripts/02_ordination_permanova.R`, `scripts/03_distance_to_control.R`, `scripts/04_extra_plots.R`, `scripts/05_simper.R`, and `scripts/06_colonizer_model.R` in order, and render this file from the project folder. The packages used are readxl, dplyr, tidyr, stringr, purrr, readr, ggplot2, vegan, nlme, and knitr.
 
 ## References
 
