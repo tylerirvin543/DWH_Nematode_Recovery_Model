@@ -13,5 +13,9 @@
 Thumbs.db
 desktop.ini
 
+# Office lock files and a stray Windows artifact
+~$*
+nul
+
 # Raw data placeholders should track; large raw data dumps should not by default
 # (uncomment/add specific large-file patterns here once the dataset arrives)
