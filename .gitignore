@@ -1,21 +1,27 @@
-# RStudio / R project files
+# R and RStudio
 .Rproj.user/
 .Rhistory
 .RData
 .Ruserdata
 
-# Posit Assistant local metadata (defensive; plans actually live outside the repo,
-# but keep this in case any local assistant folder ever appears here)
-.posit/
+# Quarto
+.quarto/
+*_files/
 
-# OS / editor cruft
+# Rendered documents (shared through Box, rebuilt from the .qmd files)
+/nematode_recovery_report.html
+/nematode_recovery_report.docx
+/nematode_recovery_slides.html
+
+# Data and course material that stay local
+data/raw/*.xlsx
+docs/pitch_notes.pdf
+docs/*REVISED*
+
+# Editor and system files
+.posit/
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# Office lock files and a stray Windows artifact
 ~$*
 nul
-
-# Raw data placeholders should track; large raw data dumps should not by default
-# (uncomment/add specific large-file patterns here once the dataset arrives)

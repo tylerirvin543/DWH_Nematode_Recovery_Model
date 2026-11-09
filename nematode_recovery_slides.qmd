@@ -1,0 +1,210 @@
+---
+title: "Recovery in 1, 2, 3"
+subtitle: "Did deep sea nematode communities near the Deepwater Horizon spill move toward unimpacted sites?"
+author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
+date: today
+format:
+  revealjs:
+    theme: simple
+    slide-number: true
+    html-math-method: katex
+    embed-resources: true
+    width: 1280
+    height: 720
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(readr)
+library(dplyr)
+library(knitr)
+
+# Render from the project root so these relative paths work
+within  <- read_csv("outputs/tables/permanova_within_station.csv", show_col_types = FALSE)
+between <- read_csv("outputs/tables/permanova_impact_between.csv", show_col_types = FALSE)
+dmodel  <- read_csv("outputs/tables/distance_model_effects.csv", show_col_types = FALSE)
+simper  <- read_csv("outputs/tables/simper_hi_vs_ni.csv", show_col_types = FALSE)
+est     <- read_csv("outputs/tables/colonizer_model_estimates.csv", show_col_types = FALSE)
+fitted  <- read_csv("outputs/tables/colonizer_model_fitted.csv", show_col_types = FALSE)
+cp_st   <- read_csv("outputs/tables/cp_composition_stations.csv", show_col_types = FALSE) |>
+  summarise(m = mean(pct), .by = c(year, impact, cp))
+
+pick <- function(df, tr, trm) df |> filter(transform == tr, term == trm)
+yr  <- pick(within, "sqrt", "year_f")
+ixn <- pick(within, "sqrt", "impact:year_f")
+imp <- pick(between, "sqrt", "Model")
+e_  <- function(prefix) est[startsWith(est$parameter, prefix), ]
+cpv <- function(y, g, k) cp_st$m[cp_st$year == y & cp_st$impact == g & cp_st$cp == k]
+fp  <- function(g, y) 100 * fitted$p[fitted$impact == g & fitted$year == y]
+fmt_p <- function(p) ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p))
+```
+
+## Why nematodes?
+
+- The 2010 Deepwater Horizon blowout released oil that reached the deep seafloor
+- Nematodes dominate deep sea sediment, live their whole lives in the mud, and reproduce quickly
+- Earlier work suggests they can recover faster than many other sediment animals
+- That makes them a good group in which to look for early signs of recovery
+
+::: notes
+About one minute. Keep this short. The point is that nematodes are a reasonable group in which to expect early recovery, but it is an expectation we want to check against data.
+:::
+
+## Our question
+
+**Between 2010 and 2011, did nematode communities at oil impacted stations become more similar to those at unimpacted stations?**
+
+- Working hypothesis: heavily and moderately impacted stations move toward the controls
+- "Recovered" means within the normal range of variation among controls, not identical to a control
+- Original plan was a simulation out to 2022; two sampling years cannot support that, so we changed course after feedback from our instructor
+
+::: notes
+Explain that two healthy sites are never identical, so recovery has to be measured against how different the controls are from each other. Mention the change of plan briefly and honestly.
+:::
+
+## The data
+
+- Nine stations: 3 heavily impacted (HI), 3 moderately impacted (MI), 3 unimpacted controls (NI)
+- Sampled in 2010 and 2011, two sediment layers each (0 to 1 cm and 1 to 3 cm)
+- Nematodes counted and identified, compared at family level
+- Layers averaged, so each station in each year is one observation (18 in total)
+- 2010 values are percentages and 2011 values are counts, so we compare composition, not abundance
+
+::: notes
+Mention that the layers come from the same spot, so they are not independent. Mention the family level choice: the genus lists differ between years partly because of naming and identification detail. All cleaning decisions are logged in the report appendix.
+:::
+
+## Putting a number on "how different"
+
+Bray-Curtis dissimilarity between two communities:
+
+$$
+BC_{ij} = \frac{\sum_k |y_{ik} - y_{jk}|}{\sum_k (y_{ik} + y_{jk})}
+$$
+
+- $y_{ik}$ is the square root of the percentage of family $k$ in station-year $i$
+- 0 means the same mix of families, 1 means no families in common
+- We draw all the distances as a two dimensional map (NMDS)
+
+::: notes
+Square root transformation stops a few very common families from dominating. We repeated every analysis on untransformed data as a check and say where the two disagree.
+:::
+
+## Communities separate by impact, and everything shifts together
+
+![](outputs/figures/nmds_trajectories.png){fig-align="center" height="520"}
+
+Arrows run from 2010 to 2011. Heavily impacted stations sit left, controls right. Almost every station moved the same way, including the controls.
+
+::: notes
+This is the key picture. Two things at once: impact level is clearly tied to community composition, and there is a shared shift between years. The heavily impacted arrows run parallel to the others, not toward the controls.
+:::
+
+## Are the patterns more than chance? (PERMANOVA)
+
+```{r permanova}
+bind_rows(
+  imp |> mutate(Test = "Impact level"),
+  yr  |> mutate(Test = "Year"),
+  ixn |> mutate(Test = "Impact x year")
+) |>
+  transmute(Test, `R squared` = R2, p = fmt_p(`Pr(>F)`)) |>
+  kable(digits = 2)
+```
+
+- Impact level and year both matter
+- The change over the year did not clearly differ by impact level, and that is the term most relevant to recovery
+- Three stations per group means low power
+
+::: notes
+Explain PERMANOVA as shuffling labels and asking how often a shuffle separates the communities as well as the real labels. Impact is tested by shuffling whole stations, and year within stations, because impact never changes within a station.
+:::
+
+## Distance to the controls
+
+![](outputs/figures/distance_to_control.png){fig-align="center" height="470"}
+
+- Distance = average dissimilarity to the three controls; dashed line is how different controls are from each other
+- No estimate points toward recovery; with square root data the gap grew, but not with untransformed data
+
+::: notes
+Report the number carefully: the gap increased by about `r sprintf("%.2f", dmodel$estimate[dmodel$transform == "sqrt" & dmodel$response == "gap" & dmodel$effect == "Change per year, HI and MI pooled"])` per year under square root data, but the untransformed result includes zero. So we say we found no evidence of moving closer, not that they moved away. Twelve observations, six stations.
+:::
+
+## Which families differ most between HI and NI?
+
+![](outputs/figures/cp_composition.png){fig-align="center" height="440"}
+
+- Monhysteridae accounts for about `r sprintf("%.0f", 100 * simper$cumulative[1])`% of the HI versus NI difference (SIMPER)
+- Colonizer (c-p 1) animals: about `r sprintf("%.0f", cpv(2010, "HI", 1))`% of HI communities in 2010 and `r sprintf("%.0f", cpv(2011, "HI", 1))`% in 2011, against `r sprintf("%.0f", cpv(2010, "NI", 1))`% and `r sprintf("%.0f", cpv(2011, "NI", 1))`% at controls
+- Nearly all of it is one genus, *Halomonhystera*
+
+::: notes
+c-p values run from 1 (fast reproducing colonizers) to 5 (slow reproducing persisters). This fits the idea from our proposal that opportunists increase where disturbance is strong, but it rests mostly on one genus and not a gradient across all families.
+:::
+
+## A model for the colonizer share
+
+Colonizer animals $y_{st}$ out of $n_{st}$ at station $s$ in year $t$:
+
+$$
+y_{st} \sim \text{BetaBinomial}(n_{st}, p_{st}, \kappa)
+$$
+
+$$
+\text{logit}(p_{st}) = a + b_{HI} HI_s + b_{MI} MI_s + (c + d_{HI} HI_s + d_{MI} MI_s)(t - 2010)
+$$
+
+- Likelihood written by hand, fitted with `optim`, profile likelihood intervals
+- Beta binomial beats a plain binomial (stations vary more than counting error)
+- $d_{HI}$ asks whether the HI change differs from the NI change
+
+::: notes
+Beta binomial lets each station's true proportion vary around the group mean, with kappa controlling that extra variation. The key parameter is d_HI. If heavily impacted stations were converging on controls, their colonizer share would fall relative to controls and d_HI would be negative. 2010 sample sizes are reconstructed from percentages, and the result did not change when we halved or doubled them.
+:::
+
+## Colonizer model result
+
+![](outputs/figures/colonizer_fit.png){fig-align="center" height="400"}
+
+- 2010: odds of a colonizer about `r sprintf("%.1f", e_("bHI")$odds_ratio)` times higher at HI than NI (95% interval `r sprintf("%.1f", e_("bHI")$or_lower)` to `r sprintf("%.1f", e_("bHI")$or_upper)`)
+- NI fell from about `r sprintf("%.0f", fp("NI", 2010))`% to `r sprintf("%.0f", fp("NI", 2011))`%; HI stayed near `r sprintf("%.0f", fp("HI", 2010))`% to `r sprintf("%.0f", fp("HI", 2011))`%
+- $d_{HI}$ = `r sprintf("%.2f", e_("dHI")$estimate)` (profile interval `r sprintf("%.2f", e_("dHI")$profile_lower)` to `r sprintf("%.2f", e_("dHI")$profile_upper)`): the gap widened
+
+::: notes
+The gap widened because the controls dropped, not because colonizers increased at heavily impacted stations. That is the opposite of convergence, so no evidence of recovery in the colonizer share by 2011. We cannot say why the controls changed. Profile likelihood plot is in the backup slide.
+:::
+
+## What we can and cannot say
+
+- **Supported:** impacted and unimpacted stations hosted different communities in both years, with more colonizers where impact was heavy
+- **Not supported:** recovery by 2011; but one year is a short time, so this does not show recovery is absent
+- **Limits:**
+  - The controls shifted as much as the impacted stations, which could be a real regional change or a difference in sampling or identification between years
+  - Three stations per group, no pre spill baseline, and impact is partly tangled with location
+  - 2010 sample sizes are reconstructed
+
+::: notes
+Be upfront that the shared shift between years is the main limitation. Two years of data cannot separate a real regional change from a methods change.
+:::
+
+## Where this goes next
+
+- Questions about the dataset: were sampling and identification the same in both years, and what units were used for hydrocarbons and metals?
+- Do later surveys exist (for example 2023)? That would allow a recovery rate to be estimated and tested against a prediction
+- Compare *Halomonhystera* and the other differing families with published responses to oil
+
+**Questions?**
+
+::: notes
+End with the 2023 data point, since a longer time span is what would let us test recovery properly. Invite questions.
+:::
+
+## Backup: profile likelihoods for the colonizer model
+
+![](outputs/figures/colonizer_profiles.png){fig-align="center" height="480"}
+
+The 95% interval is where the curve lies below the dashed line. Left: HI minus NI in 2010. Right: difference in yearly change.

@@ -4,9 +4,9 @@ subtitle: "Working report on the 2010 and 2011 data"
 author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
 date: today
 format:
-  html:
+  docx:
     toc: true
-    embed-resources: true
+    toc-depth: 2
 execute:
   echo: false
   warning: false
