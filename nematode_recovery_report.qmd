@@ -31,6 +31,7 @@ bdisp    <- read_csv("outputs/tables/betadisper.csv", show_col_types = FALSE)
 nmds_sum <- read_csv("outputs/tables/nmds_summary.csv", show_col_types = FALSE)
 change   <- read_csv("outputs/tables/station_change.csv", show_col_types = FALSE)
 pca_var  <- read_csv("outputs/tables/env_pca_variance.csv", show_col_types = FALSE)
+simper   <- read_csv("outputs/tables/simper_hi_vs_ni.csv", show_col_types = FALSE)
 bg       <- read_csv("outputs/tables/control_background.csv", show_col_types = FALSE)
 dmodel   <- read_csv("outputs/tables/distance_model_effects.csv", show_col_types = FALSE)
 
@@ -147,7 +148,7 @@ In both years the first axis explains most of the variation (`r sprintf("%.0f", 
 include_graphics("outputs/figures/family_composition.png")
 ```
 
-The composition bars show what the NMDS map is summarizing. Xyalidae and Monhysteridae make up much of every station, but Monhysteridae takes up a larger share at the heavily impacted stations in both years, while Chromadoridae and Comesomatidae are more prominent at the unimpacted ones. Which families drive the difference between impact levels could be tested more formally, and we have not done that yet.
+The composition bars show what the NMDS map is summarizing. Xyalidae and Monhysteridae make up much of every station, but Monhysteridae takes up a larger share at the heavily impacted stations in both years, while Chromadoridae and Comesomatidae are more prominent at the unimpacted ones. The next section looks more closely at which families drive the difference between impact levels.
 
 ```{r idx-fig}
 #| fig-cap: "Maturity index (MI) and index of trophic diversity (ITD) for each station in 2010 and 2011, averaged over the two layers. MI values are recalculated from the cleaned data because the 2010 workbook values appear to contain an error."
@@ -163,6 +164,32 @@ include_graphics("outputs/figures/site_map.png")
 
 The site map shows that the three heavily impacted stations are clustered in the north, the unimpacted stations lie mostly to the south and east, and the moderately impacted stations are scattered toward the edges. Because impact level and location are partly tangled together, differences between impact groups could also reflect other features that vary across the area, such as depth or sediment type, and we cannot fully separate those with this design.
 
+## Which families differ most between heavily impacted and unimpacted stations
+
+The composition bars suggest that some families change with impact level, so we asked which ones account for most of the difference. We used a method called SIMPER. It starts from the average Bray-Curtis dissimilarity between the heavily impacted and unimpacted stations (`r sprintf("%.2f", sum(simper$contribution))` here) and splits it into a contribution from each family. A family contributes a lot when its abundance differs between the two groups and does so consistently across stations. This is a descriptive tool. We did not attach p values, because the two years at a station are not independent and there are only three stations per group. As a check, we also ranked the families separately within each year, using three heavily impacted and three unimpacted stations each time.
+
+```{r simper-fig}
+#| fig-cap: "The eight families contributing most to the difference between heavily impacted (HI) and unimpacted (NI) communities. Colour shows which group had the higher average abundance."
+include_graphics("outputs/figures/simper_hi_vs_ni.png")
+```
+
+```{r simper-table}
+simper |>
+  slice_head(n = 8) |>
+  transmute(
+    Rank = rank,
+    Family = family,
+    `Share of difference (%)` = 100 * (cumulative - lag(cumulative, default = 0)),
+    `Mean % at HI` = mean_pct_HI,
+    `Mean % at NI` = mean_pct_NI,
+    `Rank in 2010` = rank_2010,
+    `Rank in 2011` = rank_2011
+  ) |>
+  kable(digits = 1, caption = "Families contributing most to the HI versus NI difference (square root data for ranking, untransformed percent for the means).")
+```
+
+One family stands out. Monhysteridae accounts for about `r sprintf("%.0f", 100 * simper$cumulative[1])`% of the difference, averaging `r sprintf("%.0f", simper$mean_pct_HI[1])`% of the community at heavily impacted stations compared with `r sprintf("%.0f", simper$mean_pct_NI[1])`% at unimpacted ones, and it ranked first in both years. Linhomoeidae is also more abundant at the heavily impacted stations, while Chromadoridae, Cyatholaimidae, and Comesomatidae are more abundant at the unimpacted ones. Beyond Monhysteridae the contributions are fairly evenly spread, so the difference between the two groups reflects a number of families shifting a little each, not one or two. The rankings were not equally stable across years. Xyalidae ranked second in 2010 but much lower in 2011, so we would treat the order of the lower ranked families as uncertain. We have not yet looked at whether these patterns fit the idea that opportunistic families increase after disturbance, but the c-p values in the dataset would allow that to be checked.
+
 ## What the results suggest, and their limits
 
 Oil impacted and unimpacted stations hosted different nematode communities in both years. Between 2010 and 2011 the whole study area shifted in a similar way, including the unimpacted stations, and we did not detect that impacted stations changed differently from the rest or that they moved closer to the controls. These results do not support recovery by 2011, but they also do not show that recovery is absent. A single year is a short time over which to expect it.
@@ -173,7 +200,7 @@ The most important limitation is the shift shared by all stations. Because the c
 
 Several questions about the dataset affect how far we can interpret these results. We do not yet know whether sampling, subsampling, and identification methods were the same in both years, or what units the hydrocarbon and metal measurements use in each year, since the values differ greatly between years. The maturity index row for 2010 repeats one value across many samples and may be a copy error. We also do not know whether later surveys, such as a 2023 sampling, exist and are comparable to these.
 
-The last question matters most. Recovery is slow, and later data would let us look at a time span long enough to be informative. It would also allow the analyses our instructor suggested: estimating a recovery rate directly, and testing how well the first two years predict later observations. In the meantime, a useful next step is to identify which families account for the difference between heavily impacted and unimpacted stations. We chose not to predict the trophic diversity index from genus composition, since the index is calculated from those same genera and the result would be circular.
+The last question matters most. Recovery is slow, and later data would let us look at a time span long enough to be informative. It would also allow the analyses our instructor suggested: estimating a recovery rate directly, and testing how well the first two years predict later observations. In the meantime, a useful next step is to check whether the families that differ most between heavily impacted and unimpacted stations fit what is known about how nematode groups respond to disturbance. We chose not to predict the trophic diversity index from genus composition, since the index is calculated from those same genera and the result would be circular.
 
 ## Appendix: cleaning log and reproducing the report
 
@@ -185,4 +212,4 @@ clean_log |>
   kable(caption = "Cleaning decisions recorded by scripts/01_data_prep.R.")
 ```
 
-To reproduce the analysis, open `Group Project.Rproj`, run `scripts/01_data_prep.R`, `scripts/02_ordination_permanova.R`, `scripts/03_distance_to_control.R`, and `scripts/04_extra_plots.R` in order, and render this file from the project folder. The packages used are readxl, dplyr, tidyr, stringr, purrr, readr, ggplot2, vegan, nlme, and knitr.
+To reproduce the analysis, open `Group Project.Rproj`, run `scripts/01_data_prep.R`, `scripts/02_ordination_permanova.R`, `scripts/03_distance_to_control.R`, `scripts/04_extra_plots.R`, and `scripts/05_simper.R` in order, and render this file from the project folder. The packages used are readxl, dplyr, tidyr, stringr, purrr, readr, ggplot2, vegan, nlme, and knitr.
