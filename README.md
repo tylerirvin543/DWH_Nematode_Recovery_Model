@@ -1,66 +1,60 @@
-# Recovery in 1, 2, 3... Nematode Community Recovery After the Deepwater Horizon Oil Spill
+# Recovery in 1, 2, 3: nematode communities after the Deepwater Horizon spill
 
 NRES 746 (Fall 2026) final group project.
 
-## Team
+Team: Tyler Irvin, Cindy Murillo, Yazmin Elizarraraz
 
-- Tyler Irvin
-- Cindy
-- Yazmin Elizarraraz
+## What we are asking
 
-## Project summary
+Between 2010 and 2011, did nematode communities at oil impacted deep sea stations in the Gulf of Mexico become more similar to communities at unimpacted stations? The data are nematode counts from nine stations (three heavily impacted, three moderately impacted, three unimpacted) sampled in 2010 and 2011, with two sediment layers per station.
 
-We're examining whether deep-sea nematode communities in the Gulf of Mexico show
-recovery following the 2010 Deepwater Horizon oil spill, using taxonomic and
-trophic/life-history data collected at 9 stations (3 each at high-impact,
-medium-impact, and control sites) in 2010 and 2011.
+We started with a Bayesian state-space simulation and changed course after feedback from our instructor, because two sampling years cannot support a model that projects recovery over a decade. The current analysis describes how the communities compare, tests whether the differences are larger than chance, and measures directly whether impacted stations moved closer to the controls.
 
-**Research questions**
+The full write-up, including the equations used, is in `nematode_recovery_report.qmd` (rendered copy: `nematode_recovery_report.html`).
 
-1. Do nematode communities show measurable recovery by 2011 relative to 2010 baseline conditions?
-2. Do nematodes recover faster than the broader meiofauna community?
+## Where things stand
 
-**Hypothesis:** Nematode communities will show signs of recovery by 2013.
-
-**Anticipated approach:** Bayesian multivariate state-space model estimating
-taxon- and station-level transition dynamics between 2010 and 2011, used to
-project forward community trajectories and compare simulated vs. observed
-Bray-Curtis dissimilarity between high-impact and control stations over time.
-
-See `docs/` for the full project pitch and the course's final project guidelines.
-
-## Status
-
-- [x] Project pitch drafted
-- [ ] Group proposal (2-page) — in progress
-- [ ] Nematode dataset obtained (pending from Yazmin)
-- [ ] Preliminary data visualization
+- [x] Project pitch and proposal
+- [x] Dataset received and cleaned
+- [x] Ordination, PERMANOVA, distance to controls, supporting plots, SIMPER and colonizer check
+- [ ] Custom model fitted by maximum likelihood or Bayesian inference (course requirement, see report)
+- [ ] Later survey data (for example 2023), if it exists and is comparable
 - [ ] Oral presentation
 - [ ] Rough draft
 - [ ] Final paper
 
-## Repository structure
+## Repository layout
 
 ```
 .
 ├── data/
-│   ├── raw/          # Original nematode dataset(s), unmodified
-│   └── processed/    # Cleaned/derived data used for modeling
-├── scripts/          # Analysis scripts (data prep, model fitting, simulation, figures)
+│   ├── raw/          original workbook (kept locally, not tracked in git)
+│   └── processed/    tidy tables written by 01_data_prep.R
+├── scripts/          analysis scripts, run in numbered order
 ├── outputs/
-│   ├── figures/      # Publication-quality figures for the final paper
-│   ├── plots/        # Exploratory/diagnostic plots not intended for the final paper
-│   └── tables/       # Model output tables, summary statistics
-└── docs/             # Project guidelines, pitch, and proposal PDFs
+│   ├── figures/      PNG figures used in the report
+│   └── tables/       CSV results, including the data cleaning log
+├── docs/             course guidelines, pitch, instructor feedback
+├── nematode_recovery_report.qmd
+└── nematode_recovery_report.html
 ```
+
+## Scripts
+
+Run these from the project root (open `Group Project.Rproj`), in order.
+
+| Script | What it does |
+|---|---|
+| `01_data_prep.R` | Reads the workbook, cleans it, converts to percent composition, builds genus and family tables, writes a cleaning log |
+| `02_ordination_permanova.R` | Bray-Curtis dissimilarity, NMDS with 2010 to 2011 arrows, PERMANOVA |
+| `03_distance_to_control.R` | Distance of impacted stations to controls, control background, mixed model of change per year |
+| `04_extra_plots.R` | Environmental PCA, family composition bars, MI and ITD plot, site map |
+| `05_simper.R` | SIMPER for HI versus NI, colonizer and persister (c-p) comparison |
+
+To rebuild the report after running the scripts, render `nematode_recovery_report.qmd` with Quarto from the project root.
+
+R packages used: readxl, dplyr, tidyr, stringr, purrr, readr, ggplot2, vegan, nlme, knitr.
 
 ## Data
 
-Primary data: nematode taxonomic identification plus trophic and life-history
-indices from 2010-2011, 9 stations (3 per impact level: high, medium, control).
-Source/access details to be added once the dataset is obtained.
-
-## Reproducing the analysis
-
-Once scripts are added, run them in order from `scripts/` (numbered prefixes
-will indicate run order, e.g. `01_data_prep.R`, `02_model.R`, ...).
+The data come from the Deepwater Horizon deep sea benthic sampling and were shared with the group by Yazmin. Before the raw workbook or anything derived from it is shared more widely, we should confirm that we have permission to publish it. Cleaning decisions and open questions about the dataset are listed in `outputs/tables/data_cleaning_log.csv` and in the report appendix.

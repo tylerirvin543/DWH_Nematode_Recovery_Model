@@ -6,6 +6,8 @@
 # Inputs : data/processed/community_family_long.csv
 # Outputs: outputs/tables/simper_hi_vs_ni.csv
 #          outputs/figures/simper_hi_vs_ni.png
+#          outputs/tables/cp_composition_stations.csv, simper_family_cp.csv
+#          outputs/figures/cp_composition.png
 #
 # Notes
 # - SIMPER splits the average Bray-Curtis dissimilarity between two groups into a
@@ -93,4 +95,56 @@ simper_plot <- ggplot(top, aes(contribution, family, fill = higher_in)) +
 
 ggsave("outputs/figures/simper_hi_vs_ni.png", simper_plot, width = 7, height = 4.5, dpi = 300)
 
-message("Done. SIMPER table and figure written to outputs/.")
+# ---- Colonizer-persister (c-p) check ---------------------------------------
+# c-p values run from 1 (extreme colonizers: fast reproduction, tolerant of disturbance)
+# to 5 (persisters: slow reproduction, sensitive). If HI stations are dominated by
+# opportunistic nematodes, they should have more of the community in low c-p classes.
+genus_long <- read_csv("data/processed/community_genus_long.csv", show_col_types = FALSE)
+
+# Percent of each station's community in each c-p class (two layers averaged)
+cp_stations <- genus_long |>
+  summarise(pct = sum(rel_abund) / n_distinct(sample), .by = c(year, station, impact, cp)) |>
+  complete(nesting(year, station, impact), cp = 1:5, fill = list(pct = 0)) |>
+  arrange(year, impact, station, cp)
+write_csv(cp_stations, "outputs/tables/cp_composition_stations.csv")
+
+# c-p of the largest SIMPER families (abundance weighted across their genera)
+simper_family_cp <- genus_long |>
+  filter(family %in% simper_table$family[1:8]) |>
+  summarise(
+    mean_cp = sum(rel_abund * cp) / sum(rel_abund),
+    cp_min = min(cp), cp_max = max(cp),
+    .by = family
+  ) |>
+  right_join(simper_table |> select(rank, family, higher_in) |> slice_head(n = 8), by = "family") |>
+  arrange(rank) |>
+  select(rank, family, higher_in, mean_cp, cp_min, cp_max)
+write_csv(simper_family_cp, "outputs/tables/simper_family_cp.csv")
+
+# Which genera make up the c-p 1 animals at HI stations?
+cp1_genera <- genus_long |>
+  filter(cp == 1, impact == "HI") |>
+  summarise(total = sum(rel_abund), .by = c(family, genus)) |>
+  mutate(share_of_cp1_at_HI = total / sum(total)) |>
+  arrange(desc(share_of_cp1_at_HI)) |>
+  select(family, genus, share_of_cp1_at_HI)
+write_csv(cp1_genera, "outputs/tables/cp1_genera_at_hi.csv")
+
+cp_plot_df <- cp_stations |>
+  filter(impact %in% c("HI", "NI")) |>
+  mutate(impact = factor(impact, levels = c("HI", "NI")), cp = factor(cp))
+
+cp_plot <- ggplot(cp_plot_df, aes(cp, pct, fill = impact)) +
+  stat_summary(fun = mean, geom = "col", position = position_dodge(width = 0.8),
+               width = 0.7, alpha = 0.55) +
+  geom_point(aes(colour = impact), position = position_dodge(width = 0.8), size = 1.8,
+             show.legend = FALSE) +
+  facet_wrap(~year) +
+  labs(x = "c-p class (1 = colonizers, 5 = persisters)",
+       y = "Percent of community", fill = "Impact",
+       subtitle = "Bars are group means; points are individual stations") +
+  theme_bw()
+
+ggsave("outputs/figures/cp_composition.png", cp_plot, width = 8, height = 4.2, dpi = 300)
+
+message("Done. SIMPER and c-p tables and figures written to outputs/.")
