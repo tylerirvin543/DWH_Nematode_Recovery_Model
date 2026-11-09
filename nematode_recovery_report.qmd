@@ -1,13 +1,12 @@
 ---
-title: "Recovery in 1, 2, 3...: nematode communities after the Deepwater Horizon spill"
-subtitle: "Working report: data, ordination, and PERMANOVA (2010 and 2011)"
+title: "Recovery in 1, 2, 3: nematode communities after the Deepwater Horizon spill"
+subtitle: "Working report on the 2010 and 2011 data"
 author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
 date: today
 format:
   html:
     toc: true
     embed-resources: true
-    number-sections: true
 execute:
   echo: false
   warning: false
@@ -21,7 +20,6 @@ library(tidyr)
 library(knitr)
 
 # Render from the project root so these relative paths work
-env       <- read_csv("data/processed/env_stations.csv", show_col_types = FALSE)
 samples   <- read_csv("data/processed/samples.csv", show_col_types = FALSE)
 genus     <- read_csv("data/processed/community_genus_long.csv", show_col_types = FALSE)
 family    <- read_csv("data/processed/community_family_long.csv", show_col_types = FALSE)
@@ -32,207 +30,124 @@ between  <- read_csv("outputs/tables/permanova_impact_between.csv", show_col_typ
 bdisp    <- read_csv("outputs/tables/betadisper.csv", show_col_types = FALSE)
 nmds_sum <- read_csv("outputs/tables/nmds_summary.csv", show_col_types = FALSE)
 change   <- read_csv("outputs/tables/station_change.csv", show_col_types = FALSE)
+bg       <- read_csv("outputs/tables/control_background.csv", show_col_types = FALSE)
+dmodel   <- read_csv("outputs/tables/distance_model_effects.csv", show_col_types = FALSE)
 
-dist_ctrl <- read_csv("outputs/tables/distance_to_control.csv", show_col_types = FALSE)
-bg        <- read_csv("outputs/tables/control_background.csv", show_col_types = FALSE)
-dmodel    <- read_csv("outputs/tables/distance_model_effects.csv", show_col_types = FALSE)
-
+pick     <- function(df, tr, trm) df |> filter(transform == tr, term == trm)
 pick_eff <- function(tr, resp, eff) dmodel |> filter(transform == tr, response == resp, effect == eff)
-pool_gap_sqrt <- pick_eff("sqrt", "gap", "Change per year, HI and MI pooled")
-pool_gap_raw  <- pick_eff("raw", "gap", "Change per year, HI and MI pooled")
-hi_gap_sqrt   <- pick_eff("sqrt", "gap", "Change per year, HI")
-mi_gap_sqrt   <- pick_eff("sqrt", "gap", "Change per year, MI")
-bg_sqrt       <- bg |> filter(transform == "sqrt")
 
-pick <- function(df, tr, trm) df |> filter(transform == tr, term == trm)
-yr   <- pick(within, "sqrt", "year_f")
-ixn  <- pick(within, "sqrt", "impact:year_f")
-imp  <- pick(between, "sqrt", "Model")
-chg  <- change |> filter(transform == "sqrt")
+yr  <- pick(within, "sqrt", "year_f")
+ixn <- pick(within, "sqrt", "impact:year_f")
+imp <- pick(between, "sqrt", "Model")
+chg <- change |> filter(transform == "sqrt")
+
+pool_sqrt <- pick_eff("sqrt", "gap", "Change per year, HI and MI pooled")
+pool_raw  <- pick_eff("raw", "gap", "Change per year, HI and MI pooled")
+bg_sqrt   <- bg |> filter(transform == "sqrt")
+
 fmt_p <- function(p) ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p))
 ```
 
-# Where we are
+## Background and question
 
-This report walks through the analysis in the order we ran it, so each step can be checked by the group. Everything here is reproducible from the scripts in `scripts/`:
+The 2010 Deepwater Horizon blowout released a very large amount of oil into the Gulf of Mexico, and some of it reached the deep seafloor. Nematodes dominate the small animal communities in deep sea sediment. They spend their whole lives in the mud and reproduce quickly, and earlier work suggests they can recover faster than many other sediment animals after a disturbance. That makes them a reasonable group in which to look for early signs of recovery, although it is an expectation we would like to examine with data.
 
-1. `01_data_prep.R` cleans the workbook and writes tidy tables to `data/processed/`.
-2. `02_ordination_permanova.R` runs the ordination and PERMANOVA and writes figures and tables to `outputs/`.
-3. `03_distance_to_control.R` calculates each impacted station's distance to the controls and fits the mixed model.
+Our main question is whether, between 2010 and 2011, the nematode communities at oil impacted stations became more similar to those at unimpacted stations. Our working hypothesis is that they did. If recovery was under way, we would expect the heavily and moderately impacted stations to move toward the unimpacted ones, and eventually to differ from them no more than the unimpacted stations differ from each other. This last point matters because two healthy sites are never identical, so we take "recovered" to mean "within the normal range of variation among controls" and not "identical to a control."
 
-The plan follows our instructor's feedback: describe how impacted sites compare with controls using Bray-Curtis dissimilarity, ordination, PERMANOVA, and a mixed model of distance to controls, rather than the state-space simulation, which two time points cannot support. What is not done yet is anything that needs 2023 data (the exponential recovery model and the prediction test).
+We originally planned a simulation model that projected recovery forward to 2022. With only two sampling years there is too little information to say how recovery proceeds over a decade, so after discussing it with our instructor we chose a simpler design. We describe how the communities compare, ask whether the differences are larger than we would expect by chance, and measure directly whether impacted stations moved closer to the controls. The analysis can be rerun from the three scripts in the `scripts` folder, and the numbers quoted below are read from the files those scripts produce.
 
-# Data and cleaning
+## The data
 
-## What we have
+Samples come from nine stations: three heavily impacted (HI), three moderately impacted (MI), and three not impacted (NI), which serve as controls. Each station was sampled in 2010 and 2011, and at each visit the sediment was divided into a surface layer (0 to 1 cm) and a deeper layer (1 to 3 cm), giving `r nrow(samples)` samples in total. Nematodes were counted and identified to genus where possible, and always to family. The workbook also contains summary indices and environmental measurements, but here we use only community composition, since the indices are calculated from that same composition.
 
-```{r design}
-design <- samples |>
-  count(year, impact) |>
-  pivot_wider(names_from = impact, values_from = n)
-```
+The two layers at a station come from the same location and are not independent, so we averaged them. Each station in each year is therefore one observation, which leaves 18 observations from nine stations. Two features of the data shaped how we worked. First, the 2010 values are percentages while the 2011 values are counts of roughly 100 animals per sample, so we converted everything to percent. This lets us compare what the communities are made of, but not how many animals are present. Second, the genus lists differ between years (`r n_distinct(genus$genus[genus$year == 2010], na.rm = TRUE)` genera in 2010 and `r n_distinct(genus$genus[genus$year == 2011], na.rm = TRUE)` in 2011). Some of this is probably real, and some reflects spelling and how finely animals were identified. To avoid reading naming differences as ecological change, we compared the years at the family level (`r n_distinct(family$family)` families). Every cleaning decision is recorded in the appendix.
 
-The workbook has `r n_distinct(env$station)` stations: 3 high impact (HI), 3 medium impact (MI), and 3 not impacted (NI, our controls). Each station was sampled in 2010 and 2011, and each sample has two sediment layers (0-1 cm and 1-3 cm). That gives `r nrow(samples)` samples in total. Because the two layers at a station are not independent, the analyses below treat the **station-year** as the unit and average the two layers first.
+## Comparing communities
 
-Nematodes are identified to genus where possible (`r n_distinct(genus$genus[genus$year == 2010], na.rm = TRUE)` genera in 2010 and `r n_distinct(genus$genus[genus$year == 2011], na.rm = TRUE)` in 2011) and grouped into `r n_distinct(family$family)` families.
-
-```{r stations}
-env |>
-  filter(year == 2010) |>
-  select(Station = station, Impact = impact, `Depth (m)` = depth_m, PAH44, TPH) |>
-  mutate(`Depth (m)` = round(`Depth (m)`)) |>
-  kable(digits = 0, caption = "Stations with 2010 depth and two hydrocarbon measures (PAH44, TPH).")
-```
-
-## Cleaning decisions
-
-The script records every decision in `outputs/tables/data_cleaning_log.csv`, reproduced here so the report always matches the data.
-
-```{r cleaning-log}
-clean_log |>
-  rename(Step = step, Issue = issue, `What we did` = action) |>
-  kable(caption = "Cleaning log (generated by 01_data_prep.R).")
-```
-
-Three of these affect how we interpret results, so they are worth restating:
-
-- **Percent composition only.** The 2010 file stores percent composition and the 2011 file stores counts from about 100 individuals per sample. We converted both to percent, so we can compare *composition* but not *abundance*.
-- **Cross-year comparison is at family level.** The genus lists differ between years partly because of identification resolution and spelling, not only real change.
-- **Environmental data are treated as comparable across years for now**, as agreed, but the 2011 PAH44 and aluminium values look suspiciously different from 2010. None of the analyses below use the environmental variables, so they are not affected, but later steps might be.
-
-# Ordination: how do communities sit relative to each other?
-
-## Method
-
-We used family-level percent composition, averaged over the two layers, and square-root transformed it so that a few very abundant families do not dominate. We then calculated Bray-Curtis dissimilarity between all 18 station-years:
+To compare two communities we need a number that says how different they are. We used the Bray-Curtis dissimilarity, which compares the percentage of each family in two samples:
 
 $$
 BC_{ij} = \frac{\sum_k |x_{ik} - x_{jk}|}{\sum_k (x_{ik} + x_{jk})}
 $$
 
-where $x_{ik}$ is the (transformed) percent of family $k$ at station-year $i$. A value of 0 means identical composition and 1 means no shared families. We displayed these distances with non-metric multidimensional scaling (NMDS) in two dimensions, drawing an arrow from each station's 2010 position to its 2011 position. We repeated everything with untransformed percent as a robustness check.
+where $x_{ik}$ is the percentage of family $k$ in sample $i$. It ranges from 0 (the same mix of families) to 1 (no families in common). We applied it to square root transformed percentages so that a few very common families do not dominate the result, and repeated every analysis on untransformed percentages as a check.
 
-## Result
+To see the overall pattern we used non metric multidimensional scaling (NMDS). This takes all of the pairwise dissimilarities and draws a two dimensional map in which similar communities sit close together. Squeezing the information into two dimensions loses some detail, which is summarized by the stress value (`r sprintf("%.2f", nmds_sum$stress[nmds_sum$transform == "sqrt"])` here). That is acceptable for reading the general layout but not for interpreting small differences between neighbouring points. The axes have no units, and only the distances between points are meaningful.
 
 ```{r nmds-fig}
-#| fig-cap: "NMDS of family-level Bray-Curtis dissimilarity. Each arrow connects a station's 2010 position (circle) to its 2011 position (triangle)."
+#| fig-cap: "Community similarity at the family level. Arrows connect each station's 2010 position (circle) to its 2011 position (triangle). Stations that are close together have similar communities."
 include_graphics("outputs/figures/nmds_trajectories.png")
 ```
 
-The NMDS stress is `r sprintf("%.2f", nmds_sum$stress[nmds_sum$transform == "sqrt"])`, which is acceptable for a two-dimensional picture of this size, but we should read broad patterns and not fine detail.
+Two patterns appear in the map. The stations are ordered by impact level along the horizontal axis, with heavily impacted stations on the left, unimpacted stations on the right, and moderately impacted stations in between, in both years. Almost every station also moved in the same direction between years, including the unimpacted controls, and by a similar amount (`r sprintf("%.2f", min(chg$bc_2010_to_2011))` to `r sprintf("%.2f", max(chg$bc_2010_to_2011))` in Bray-Curtis units). The impacted stations therefore did not visibly move toward the controls. They shifted along with everything else.
 
-Two patterns stand out:
+## Testing whether the patterns are likely to be real
 
-- **Impact groups are separated along the horizontal axis.** HI stations sit to the left, NI stations to the right, and MI stations in between. This separation is present in both years.
-- **Almost every station moved in the same direction between years** (down and to the right on this plot), including the NI controls. The distance each station moved between 2010 and 2011 is similar across impact levels, ranging from `r sprintf("%.2f", min(chg$bc_2010_to_2011))` to `r sprintf("%.2f", max(chg$bc_2010_to_2011))` in Bray-Curtis units.
+With nine stations it is easy to see structure that is not there, so we tested the patterns with PERMANOVA. The test first measures how strongly the groups of interest (impact level or year) separate the communities. It then shuffles the group labels many times and measures the separation each time. If the real labels separate the communities better than nearly all of the shuffled versions, the pattern is unlikely to be chance, and the proportion of shuffles that do as well gives the p value. The R squared value tells us how much of the total difference between communities the grouping accounts for.
 
-If HI stations were recovering toward the controls, we would expect their arrows to point toward the NI group. Here the HI arrows point downward, roughly parallel to everyone else's, so on this plot the HI stations do not visibly move closer to the NI stations.
+Impact level belongs to a station and does not change, whereas year varies within a station, so the two effects needed different shuffling. For year, and for whether the change over the year differed by impact level, we shuffled year labels within each station. With two years per station there are only 512 possible arrangements, so the smallest attainable p value is about 0.004. For impact level we averaged each station's two years and shuffled whole stations among groups.
 
-# PERMANOVA: are the differences more than we would expect by chance?
-
-## Method
-
-PERMANOVA tests whether group differences in the distance matrix are larger than expected under random relabelling. Our design has a wrinkle: impact is a property of a station and does not change between years, so the two effects need different permutation schemes.
-
-- **Year, and impact by year** (does change between years differ by impact level?) were tested by shuffling the year labels *within* each station (999 permutations; with only two years per station there are only 512 distinct arrangements, so the smallest possible p-value is about 0.004).
-- **Impact** was tested separately on station means across both years, shuffling whole stations among impact groups (9,999 permutations; 1,680 distinct arrangements).
-
-We also checked the PERMANOVA assumption of similar spread within groups (`betadisper`, six impact-by-year groups of three points each).
-
-## Results
-
-```{r permanova-within}
-within |>
-  filter(transform == "sqrt", term != "Total") |>
-  transmute(
-    Term = recode(term, year_f = "Year", `impact:year_f` = "Impact x year", Residual = "Residual"),
-    Df, `Sum of squares` = SumOfSqs, `R-squared` = R2, `F` = F, `p` = ifelse(is.na(`Pr(>F)`), "", fmt_p(`Pr(>F)`))
-  ) |>
-  kable(digits = 3, caption = "Within-station permutation test (square-root transformed).")
+```{r permanova-table}
+bind_rows(
+  yr  |> mutate(Test = "Year"),
+  ixn |> mutate(Test = "Impact x year"),
+  imp |> mutate(Test = "Impact level")
+) |>
+  transmute(Test, `R squared` = R2, F = F, p = fmt_p(`Pr(>F)`)) |>
+  kable(digits = 2, caption = "PERMANOVA results (square root data). Year and impact x year use shuffling within stations, and impact level uses shuffling of whole stations.")
 ```
 
-```{r permanova-between}
-between |>
-  filter(transform == "sqrt", term != "Total") |>
-  transmute(
-    Term = recode(term, Model = "Impact (station means)", Residual = "Residual"),
-    Df, `Sum of squares` = SumOfSqs, `R-squared` = R2, `F` = F, `p` = ifelse(is.na(`Pr(>F)`), "", fmt_p(`Pr(>F)`))
-  ) |>
-  kable(digits = 3, caption = "Between-station permutation test of impact (square-root transformed).")
-```
+Impact level explained a large share of the differences among stations (R squared `r sprintf("%.2f", imp$R2)`, p = `r fmt_p(imp$"Pr(>F)")`), and year explained a smaller but detectable share (`r sprintf("%.2f", yr$R2)`, p = `r fmt_p(yr$"Pr(>F)")`). The interaction between impact and year is the term most relevant to recovery, because it asks whether the change over the year differed among impact levels. We did not detect such a difference (R squared `r sprintf("%.2f", ixn$R2)`, p = `r fmt_p(ixn$"Pr(>F)")`). A check on the method's assumption that groups are similarly spread out raised no concerns (p = `r fmt_p(bdisp$p[bdisp$transform == "sqrt"])`), although with three stations per group it could only detect large departures. Untransformed data gave the same overall pattern.
 
-In plain terms:
+## Distance to the controls
 
-- **Year:** communities differ between 2010 and 2011 (R² = `r sprintf("%.2f", yr$R2)`, p = `r fmt_p(yr$"Pr(>F)")`).
-- **Impact:** communities differ among HI, MI, and NI stations (R² = `r sprintf("%.2f", imp$R2)`, p = `r fmt_p(imp$"Pr(>F)")`).
-- **Impact by year:** we did not detect that the change between years depends on impact level (R² = `r sprintf("%.2f", ixn$R2)`, p = `r fmt_p(ixn$"Pr(>F)")`). This is the term that would speak to convergence, and it is not significant.
-- **Spread:** we found no evidence of unequal spread among groups (p = `r fmt_p(bdisp$p[bdisp$transform == "sqrt"])`), though with three points per group this check has little power.
-- **Robustness:** the untransformed analysis gives the same pattern (see `outputs/tables/permanova_within_station.csv` and `permanova_impact_between.csv`).
+The analyses above describe all communities together. To address our question more directly, we calculated for each HI and MI station and year the average Bray-Curtis dissimilarity to the three NI stations sampled that year. If a station were recovering, this distance should shrink over time.
 
-# Distance to control: do impacted stations get closer to the controls?
-
-## Method
-
-This is the question our instructor framed as the core one. For each impacted station (HI or MI) and each year, we calculated the Bray-Curtis dissimilarity to each of that year's three NI stations and averaged the three values. We call this the station's **distance to control**.
-
-Controls are not identical to each other either, so we also need a yardstick for natural variation. The **background** for each year is the average Bray-Curtis dissimilarity over the three pairs of NI stations. "Recovery" then means an impacted station's distance falls toward the background, not toward zero. We call the difference between a station's distance and that year's background the **gap**.
-
-We then fit linear mixed models (`nlme::lme`) with a random intercept for each station, so that each station's two measurements are treated as a pair:
-
-$$
-y_{st} = \beta_{g(s)} + \gamma_{g(s)} \, (\text{year}_t - 2010) + u_s + \varepsilon_{st}, \qquad u_s \sim N(0, \sigma_u^2), \quad \varepsilon_{st} \sim N(0, \sigma^2)
-$$
-
-where $y_{st}$ is the distance (or gap) for station $s$ in year $t$, $g(s)$ is its impact level, $\gamma_g$ is the change per year for that level, and $u_s$ is the station random effect. Recovery would show up as a **negative** $\gamma$. We also fitted a version with one pooled slope for HI and MI together. We ran everything for both the square-root and untransformed data. With 6 impacted stations and 2 years there are only 12 observations, so these are rough estimates with wide intervals, and the p-values are not adjusted for the number of models we fitted.
-
-## Results
+We also needed a sense of how different healthy sites normally are. For each year we averaged the dissimilarity across the three possible pairs of NI stations, which we call the background. It was `r sprintf("%.2f", bg_sqrt$background[bg_sqrt$year == 2010])` in 2010 and `r sprintf("%.2f", bg_sqrt$background[bg_sqrt$year == 2011])` in 2011. A recovered station would have a distance close to this background, not close to zero. The gap is a station's distance minus the background for the same year.
 
 ```{r distance-fig}
-#| fig-cap: "Mean Bray-Curtis distance from each impacted station to the NI stations. The dashed line is the NI background (mean distance among NI stations)."
+#| fig-cap: "Average dissimilarity between each impacted station and the unimpacted stations. The dashed line is the background, the average dissimilarity among unimpacted stations."
 include_graphics("outputs/figures/distance_to_control.png")
 ```
 
-The NI background was `r sprintf("%.2f", bg_sqrt$background[bg_sqrt$year == 2010])` in 2010 and `r sprintf("%.2f", bg_sqrt$background[bg_sqrt$year == 2011])` in 2011 (square-root data), so the controls themselves became a little more alike. HI stations are the furthest from the controls in both years. Most impacted stations were slightly further from the controls in 2011, not closer.
+Heavily impacted stations were furthest from the controls in both years, and most lines tilt upward, not downward. To quantify this we used a mixed model, a regression in which each station has its own baseline so that stations that are simply further from the controls do not get mistaken for an effect of time. It estimates the change per year in the gap, where a negative value would indicate movement toward the controls.
 
 ```{r distance-model}
 dmodel |>
-  filter(!grepl("^Difference", effect)) |>
+  filter(response == "gap", !grepl("^Difference", effect)) |>
   transmute(
     Data = recode(transform, sqrt = "Square root", raw = "Untransformed"),
-    Response = recode(response, distance = "Distance", gap = "Gap"),
-    Effect = effect,
-    Estimate = estimate,
-    `95% CI` = sprintf("%.3f to %.3f", lower, upper),
+    Group = sub("Change per year, ", "", effect),
+    `Change per year` = estimate,
+    `95% interval` = sprintf("%.3f to %.3f", lower, upper),
     p = fmt_p(p)
   ) |>
-  arrange(Response, desc(Data)) |>
-  kable(digits = 3, caption = "Estimated change per year (negative would mean moving toward the controls). Based on 12 observations from 6 stations.")
+  arrange(desc(Data)) |>
+  kable(digits = 3, caption = "Estimated change per year in the gap between impacted stations and the controls. Twelve observations from six stations.")
 ```
 
-In plain terms:
+No estimate pointed toward recovery. With square root data the gap increased by about `r sprintf("%.3f", pool_sqrt$estimate)` per year for HI and MI combined (95% interval `r sprintf("%.3f", pool_sqrt$lower)` to `r sprintf("%.3f", pool_sqrt$upper)`), but with untransformed data the estimate was smaller (`r sprintf("%.3f", pool_raw$estimate)`) and its interval included zero (`r sprintf("%.3f", pool_raw$lower)` to `r sprintf("%.3f", pool_raw$upper)`). Because the result depends on the transformation, we interpret it cautiously. We found no evidence that impacted stations moved closer to the controls, and we do not think the data support a firm claim that they moved away.
 
-- Under the square-root transformation the gap **grew** over the year: `r sprintf("%.3f", pool_gap_sqrt$estimate)` per year for HI and MI pooled (95% CI `r sprintf("%.3f", pool_gap_sqrt$lower)` to `r sprintf("%.3f", pool_gap_sqrt$upper)`, p = `r fmt_p(pool_gap_sqrt$p)`). This is mostly driven by HI (`r sprintf("%.3f", hi_gap_sqrt$estimate)`, p = `r fmt_p(hi_gap_sqrt$p)`) and is weaker for MI (`r sprintf("%.3f", mi_gap_sqrt$estimate)`, p = `r fmt_p(mi_gap_sqrt$p)`).
-- With untransformed data the same quantity is much smaller and its interval comfortably includes zero (`r sprintf("%.3f", pool_gap_raw$estimate)`, 95% CI `r sprintf("%.3f", pool_gap_raw$lower)` to `r sprintf("%.3f", pool_gap_raw$upper)`).
-- **No estimate points to recovery.** Every interval for the change in distance either includes zero or lies on the "moving away" side. But the size of the apparent "moving away" depends on the transformation, so we should not treat it as a firm finding.
+## What the results suggest, and their limits
 
-# What we can and cannot say
+Oil impacted and unimpacted stations hosted different nematode communities in both years. Between 2010 and 2011 the whole study area shifted in a similar way, including the unimpacted stations, and we did not detect that impacted stations changed differently from the rest or that they moved closer to the controls. These results do not support recovery by 2011, but they also do not show that recovery is absent. A single year is a short time over which to expect it.
 
-**What the analysis supports.** Impacted and control communities were different in both years, and that difference is large relative to the noise between stations.
+The most important limitation is the shift shared by all stations. Because the controls changed as much as the impacted stations, we cannot say whether this reflects a real change across the region or differences between years in how samples were collected, subsampled, or identified. Two years of data cannot separate these explanations. With only three stations per impact level, the tests also have limited power, so a result that is not significant is weak evidence that no difference exists. The permutation tests are coarse, working at the family level hides changes within families, and the distance results rest on twelve observations without adjustment for the number of models fitted, so no single p value there should carry much weight.
 
-**What it does not support.** We cannot say the nematode communities recovered, or are recovering, by 2011. The year effect is shared by all stations, including the controls, the impact-by-year term is not significant, and the distance to controls did not shrink for any group. Several caveats limit how far we can push this:
+## Questions about the dataset and next steps
 
-1. **A shared year shift cannot be separated from a change in methods.** The controls moved about as much as the impacted stations. That could be a real regional change, but it could also reflect different sampling, subsampling (counts of about 100 individuals in 2011 versus percentages in 2010), or identification between years. We have no way to tell these apart with two years of data. This is a question for Yazmin.
-2. **Low power.** With three stations per impact level, a non-significant impact-by-year term is weak evidence that nothing changed. It means we did not detect a difference, not that none exists.
-3. **Permutation tests are coarse.** Restricting permutations to within stations leaves few arrangements, so p-values come in large steps.
-4. **Family-level data hide genus-level changes.** We used families because the genus lists are not consistent between years.
-5. **Results depend on the transformation.** The distance-to-control results differ between square-root and untransformed data, and with only 12 observations and no multiple-testing adjustment, any single p-value here is fragile.
+Several questions about the dataset affect how far we can interpret these results. We do not yet know whether sampling, subsampling, and identification methods were the same in both years, or what units the hydrocarbon and metal measurements use in each year, since the values differ greatly between years. The maturity index row for 2010 repeats one value across many samples and may be a copy error. We also do not know whether later surveys, such as a 2023 sampling, exist and are comparable to these.
 
-# Next steps
+The last question matters most. Recovery is slow, and later data would let us look at a time span long enough to be informative. It would also allow the analyses our instructor suggested: estimating a recovery rate directly, and testing how well the first two years predict later observations. In the meantime, a useful next step is to identify which families account for the difference between heavily impacted and unimpacted stations. We chose not to predict the trophic diversity index from genus composition, since the index is calculated from those same genera and the result would be circular.
 
-1. **Questions for Yazmin.** Were sampling and identification methods the same in 2010 and 2011? What are the units for PAH44 and the metals in each year? Is the 2010 MI row in the workbook (which repeats one value) a copy error?
-2. **2023 data.** Whether it exists, and whether it is comparable, determines whether the exponential recovery model and the 2023 prediction test can go ahead. This is where recovery over a meaningful time span could actually be tested.
-3. **Which families drive the HI versus NI difference** (for example with SIMPER), to replace the earlier idea of predicting ITD from genera, which would be circular because ITD is built from those same genera.
+## Appendix: cleaning log and reproducing the report
 
-# Reproducing this report
+The table below is produced by the data preparation script and records each cleaning decision.
 
-Open `Group Project.Rproj`, then run `scripts/01_data_prep.R`, `scripts/02_ordination_permanova.R`, and `scripts/03_distance_to_control.R` in that order, and render this file from the project root. The packages used are `readxl`, `dplyr`, `tidyr`, `stringr`, `purrr`, `readr`, `ggplot2`, `vegan`, `nlme`, and `knitr`.
+```{r cleaning-log}
+clean_log |>
+  rename(Step = step, Issue = issue, `What we did` = action) |>
+  kable(caption = "Cleaning decisions recorded by scripts/01_data_prep.R.")
+```
+
+To reproduce the analysis, open `Group Project.Rproj`, run `scripts/01_data_prep.R`, `scripts/02_ordination_permanova.R`, and `scripts/03_distance_to_control.R` in order, and render this file from the project folder. The packages used are readxl, dplyr, tidyr, stringr, purrr, readr, ggplot2, vegan, nlme, and knitr.

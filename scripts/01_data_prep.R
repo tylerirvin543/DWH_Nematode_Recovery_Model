@@ -55,8 +55,8 @@ if (nrow(big) > 0) {
     "env",
     paste0("Median 2011/2010 ratio is large for: ",
            paste0(big$variable, " (", round(big$ratio, 2), "x)", collapse = ", "),
-           ". Could be a units or lab-method change rather than a real shift."),
-    "Kept as-is and treated as comparable (team decision). Confirm units with Yazmin before any cross-year environmental comparison."
+           ". This could reflect a change in units or laboratory methods rather than a real shift."),
+    "Kept as given and treated as comparable for now. Units and methods should be confirmed before comparing environmental variables across years."
   )
 }
 
@@ -102,13 +102,13 @@ taxa <- taxa |>
   )
 
 log_issue("taxa", "Trophic group coded 1A/1B/2A/2B in 2010 but 1a/1b/2a/2b in 2011; c-p value stored as text in 2011; trailing spaces in Family names.",
-          "Upper-cased trophic groups, converted c-p to integer, trimmed whitespace.")
+          "Set trophic groups to upper case, converted the c-p value to a number, trimmed whitespace.")
 
 # Known typo: Sabatieria (2010) vs Sabatiera (2011)
 if (any(taxa$genus == "Sabatiera")) {
   taxa <- taxa |> mutate(genus = if_else(genus == "Sabatiera", "Sabatieria", genus))
   log_issue("taxa", "'Sabatiera' appears only in 2011 and 'Sabatieria' only in 2010, which looks like a spelling variant.",
-            "Renamed 'Sabatiera' to 'Sabatieria'. Please confirm with Yazmin.")
+            "Renamed to Sabatieria. This is an assumption that should be confirmed.")
 }
 
 # Family names sitting in the Genus column (identified only to family)
@@ -121,13 +121,13 @@ if (nrow(fam_in_genus) > 0) {
   log_issue("taxa",
             paste0("Family names used in the Genus column (not resolved to genus): ",
                    paste(unique(fam_in_genus$genus), collapse = ", "), "."),
-            "Genus set to NA ('unresolved') and family kept. Family-level tables are used for cross-year comparison.")
+            "Genus set to NA ('unresolved') and family kept. Comparisons between years use family level.")
   taxa <- taxa |> mutate(genus = if_else(genus %in% family_names, NA_character_, genus))
 }
 
 # Taxon records with missing family would break the family-level table
 if (anyNA(taxa$family)) {
-  log_issue("taxa", "Some taxa have no family.", "Dropped from family-level table; check manually.")
+  log_issue("taxa", "Some taxa have no family.", "Dropped from the family table and flagged for manual checking.")
 }
 
 # Missing cell(s) inside the 2011 matrix
@@ -165,7 +165,7 @@ check <- taxa |>
 n_matched <- nrow(check)
 n_mismatch <- sum(abs(check$value - check$raw_count) > 1e-6)
 log_issue("verification",
-          paste0("2011 matrix vs 2011 raw sheet: ", n_matched, " genus-sample cells matched, ", n_mismatch, " disagree."),
+          paste0("2011 matrix vs 2011 raw sheet: ", n_matched, " genus by sample cells matched, ", n_mismatch, " disagree."),
           if (n_mismatch == 0) "Matrix 2011 contains raw counts (not percentages); layer coding confirmed." else "Investigate mismatches.")
 
 # Put every sample on a common scale: percent of the sample total
@@ -214,14 +214,14 @@ mi_bad  <- samples |> filter(abs(MI_workbook - MI_calc) > 0.1)
 itd_bad <- samples |> filter(abs(ITD_workbook - ITD_calc) > 0.05)
 
 # The 2010 workbook MI row repeats one value (1.577333) across many samples,
-# which looks like a fill-down error. ITD agrees with the recomputed values.
+# which looks like a value copied down by mistake. ITD agrees with the recomputed values.
 repeated_mi <- samples |> filter(year == 2010) |> count(MI_workbook, sort = TRUE) |> slice(1)
 log_issue("indices",
           paste0("Workbook MI vs recomputed from cleaned data: ", nrow(mi_bad), " of ", nrow(samples),
                  " samples differ by >0.1 (all 2010; the same MI value, ", round(repeated_mi$MI_workbook, 3),
                  ", is repeated in ", repeated_mi$n, " samples). Workbook ITD: ", nrow(itd_bad),
                  " samples differ by >0.05."),
-          "Use recomputed MI (matches 2011 workbook values to rounding) and workbook ITD (matches recomputed). Workbook values kept as MI_workbook/ITD_workbook. Confirm with Yazmin.")
+          "Use recomputed MI (matches 2011 workbook values to rounding) and workbook ITD (matches recomputed). Workbook values are kept as MI_workbook and ITD_workbook. The 2010 MI row should be checked at the source.")
 
 samples <- samples |> mutate(MI = MI_calc, ITD = ITD_workbook)
 
@@ -245,14 +245,14 @@ log_issue("taxa",
           paste0("Genus lists differ between years (2010: ", n_genera$n[n_genera$year == 2010],
                  " genera, 2011: ", n_genera$n[n_genera$year == 2011],
                  "). Part of this is resolution/naming, not real turnover."),
-          paste0("Cross-year analysis uses family level (", n_distinct(family_long$family), " families; ",
+          paste0("Comparisons between years use family level (", n_distinct(family_long$family), " families; ",
                  sum(fam_year$in_both), " present in both years)."))
 
 # Odd family names (superfamily/subfamily used as family)
 odd_fam <- family_names[str_detect(family_names, "oidea$|inae$")]
 if (length(odd_fam) > 0) {
-  log_issue("taxa", paste0("Non-family rank used in Family column: ", paste(odd_fam, collapse = ", "), "."),
-            "Kept as given; confirm with Yazmin whether these should be merged into a family.")
+  log_issue("taxa", paste0("A rank other than family appears in the Family column: ", paste(odd_fam, collapse = ", "), "."),
+            "Kept as given. It is unclear whether these should be merged into a family.")
 }
 
 # ---- 7. Write outputs ------------------------------------------------------
