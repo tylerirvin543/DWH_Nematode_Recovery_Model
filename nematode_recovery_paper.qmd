@@ -1,0 +1,327 @@
+---
+title: "Deep sea nematode communities one year after the Deepwater Horizon spill: little evidence of recovery, and a larger share of colonizers where oiling was heavy"
+author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
+date: today
+format:
+  docx:
+    toc: false
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(readr)
+library(dplyr)
+library(tidyr)
+library(knitr)
+
+# Render from the project root so these relative paths work
+samples <- read_csv("data/processed/samples.csv", show_col_types = FALSE)
+genus   <- read_csv("data/processed/community_genus_long.csv", show_col_types = FALSE)
+family  <- read_csv("data/processed/community_family_long.csv", show_col_types = FALSE)
+
+within   <- read_csv("outputs/tables/permanova_within_station.csv", show_col_types = FALSE)
+between  <- read_csv("outputs/tables/permanova_impact_between.csv", show_col_types = FALSE)
+bdisp    <- read_csv("outputs/tables/betadisper.csv", show_col_types = FALSE)
+nmds_sum <- read_csv("outputs/tables/nmds_summary.csv", show_col_types = FALSE)
+change   <- read_csv("outputs/tables/station_change.csv", show_col_types = FALSE)
+bg       <- read_csv("outputs/tables/control_background.csv", show_col_types = FALSE)
+dmodel   <- read_csv("outputs/tables/distance_model_effects.csv", show_col_types = FALSE)
+simper   <- read_csv("outputs/tables/simper_hi_vs_ni.csv", show_col_types = FALSE)
+est      <- read_csv("outputs/tables/colonizer_model_estimates.csv", show_col_types = FALSE)
+mfit     <- read_csv("outputs/tables/colonizer_model_fit.csv", show_col_types = FALSE)
+sens     <- read_csv("outputs/tables/colonizer_model_sensitivity.csv", show_col_types = FALSE)
+fitted   <- read_csv("outputs/tables/colonizer_model_fitted.csv", show_col_types = FALSE)
+cp_means <- read_csv("outputs/tables/cp_composition_stations.csv", show_col_types = FALSE) |>
+  summarise(m = mean(pct), .by = c(year, impact, cp))
+cp1g     <- read_csv("outputs/tables/cp1_genera_at_hi.csv", show_col_types = FALSE)
+
+pick     <- function(df, tr, trm) df |> filter(transform == tr, term == trm)
+pick_eff <- function(tr, resp, eff) dmodel |> filter(transform == tr, response == resp, effect == eff)
+e_       <- function(prefix) est[startsWith(est$parameter, prefix), ]
+cpv      <- function(y, g, k) cp_means$m[cp_means$year == y & cp_means$impact == g & cp_means$cp == k]
+fp       <- function(g, y) 100 * fitted$p[fitted$impact == g & fitted$year == y]
+fmt_p    <- function(p) ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p))
+
+yr  <- pick(within, "sqrt", "year_f")
+ixn <- pick(within, "sqrt", "impact:year_f")
+imp <- pick(between, "sqrt", "Model")
+chg <- change |> filter(transform == "sqrt")
+
+pool_sqrt <- pick_eff("sqrt", "gap", "Change per year, HI and MI pooled")
+pool_raw  <- pick_eff("raw", "gap", "Change per year, HI and MI pooled")
+bg_sqrt   <- bg |> filter(transform == "sqrt")
+
+bHI <- e_("bHI"); dHI <- e_("dHI"); cNI <- e_("c (")
+```
+
+## Abstract
+
+The 2010 Deepwater Horizon spill exposed deep sea sediment in the Gulf of Mexico to oil, but it is not clear how quickly the nematode communities that dominate this sediment return to a state resembling unimpacted sites. We used nematode composition from nine stations (three heavily impacted, three moderately impacted, and three unimpacted) sampled in 2010 and 2011 to ask whether impacted communities became more similar to unimpacted ones over one year. Impact level explained much of the variation among stations in both years (PERMANOVA R² = `r sprintf("%.2f", imp$R2)`), but all stations, including the unimpacted ones, shifted in a similar direction between years, and we found no evidence that the distance from impacted to unimpacted stations decreased. The clearest difference in composition was the share of colonizer nematodes (colonizer and persister class 1), almost all of them the genus *Halomonhystera*. We fitted a beta binomial model of this share by maximum likelihood. In 2010 the odds of a colonizer animal were `r sprintf("%.1f", bHI$odds_ratio)` times higher at heavily impacted than at unimpacted stations (95% profile interval `r sprintf("%.1f", bHI$or_lower)` to `r sprintf("%.1f", bHI$or_upper)`), and the gap widened by 2011 because the share fell at unimpacted stations while staying near `r sprintf("%.0f", fp("HI", 2011))`% at heavily impacted ones. These results do not support recovery by 2011, although two years of data, three stations per group, and a shift shared by all stations limit what can be concluded.
+
+## Introduction
+
+The Deepwater Horizon blowout in 2010 released oil at a depth of about 1,525 m for 89 days (Bik et al., 2012), and over 4.9 million barrels of crude oil and hydrocarbon gases entered the Gulf of Mexico (Baguley et al., 2024). A deep sea plume moved southwest from the wellhead along deep currents and affected the benthic ecosystem on the seafloor (Montagna et al., 2013; Baguley et al., 2024). Soft sediment benthos was one of the habitats studied afterward through the Natural Resource Damage Assessment and the Gulf of Mexico Research Initiative. Within this benthos, the small animals known as meiofauna are abundant and diverse (Rex et al., 2006), and nematodes are the dominant meiofaunal group in the deep sea. They contribute to biogeochemical cycling through bioturbation and related processes that oxygenate the sediment and move solutes (Sharma et al., 2012).
+
+Nematodes are a natural group in which to look for recovery. They spend their whole lives in the sediment, have short generation times and high metabolic rates, and can recover faster than other meiofauna after a disturbance (Brannock et al., 2017). They are not all equally tolerant, however. Some genera are opportunistic colonizers, whereas others are more persistent and more vulnerable to stressors such as oil, so a community can change in composition even when total numbers recover (Ridall and Ingels, 2021). The colonizer and persister (c-p) scale places nematode genera from 1 (colonizers, fast reproducing and tolerant of disturbance) to 5 (persisters, slow reproducing and sensitive), and it underlies the widely used maturity index (Bongers, 1990; Bongers and Ferris, 1999). Judging recovery also requires a reference. Two undisturbed sites are never identical, so a disturbed site has recovered only when it differs from reference sites by no more than reference sites differ from one another.
+
+Following recovery well requires long records, and the data available to us cover only two years, 2010 and 2011. We therefore take a modest approach and try to say clearly what a short record can and cannot show. We compare community composition at heavily impacted, moderately impacted, and unimpacted stations, and we model the share of colonizer nematodes with a likelihood we write ourselves. We ask two questions:
+
+1. Between 2010 and 2011, did nematode communities at impacted stations become more similar to those at unimpacted stations, judged against the variation among unimpacted stations?
+2. Is the difference between heavily impacted and unimpacted communities carried by colonizer nematodes, and did the colonizer share change differently at heavily impacted stations over the year?
+
+If recovery was under way, we expect the distance from impacted to unimpacted stations to shrink and the colonizer share at heavily impacted stations to fall relative to that at unimpacted stations.
+
+## Methods
+
+### Study system and data
+
+The data come from nine stations on the deep seafloor: three heavily impacted (HI), three moderately impacted (MI), and three unimpacted (NI), which serve as controls. Each station was sampled in 2010 and 2011, and at each visit the sediment was divided into a surface layer (0 to 1 cm) and a deeper layer (1 to 3 cm), giving `r nrow(samples)` samples. Nematodes were counted and identified to genus where possible and always to family. The 2010 values are percentages of each sample and the 2011 values are counts of roughly 100 animals per sample, so we converted everything to percent composition. We can therefore compare what communities are made of but not how many animals are present. Genus lists differ between the years (`r n_distinct(genus$genus[genus$year == 2010], na.rm = TRUE)` genera in 2010 and `r n_distinct(genus$genus[genus$year == 2011], na.rm = TRUE)` in 2011), partly because of spelling and identification detail, so comparisons between years use families (`r n_distinct(family$family)` in total). All cleaning decisions are listed in Supplementary Table S1.
+
+Let $c_{sik}$ be the count (or, for 2010, the percentage) of family $k$ in layer $i$ at station-year $s$. The two layers at a station come from the same location and are not independent, so we converted each layer to a percentage and then averaged them,
+
+$$
+p_{sik} = 100 \, \frac{c_{sik}}{\sum_k c_{sik}}, \qquad x_{sk} = \frac{p_{s1k} + p_{s2k}}{2},
+$$
+
+which gives 18 observations (nine stations in two years). Most analyses use $y_{sk} = \sqrt{x_{sk}}$, which keeps a few very common families from dominating, and we repeated them with $x_{sk}$ as a check.
+
+### Community dissimilarity, ordination, and PERMANOVA
+
+We measured the difference between two station-years with the Bray-Curtis dissimilarity (Bray and Curtis, 1957),
+
+$$
+BC_{ij} = \frac{\sum_k |y_{ik} - y_{jk}|}{\sum_k (y_{ik} + y_{jk})},
+$$
+
+which runs from 0 (the same mix of families) to 1 (no families in common). We displayed the dissimilarities with non metric multidimensional scaling (NMDS), which places points on a two dimensional map so that distances between points keep the same rank order as the dissimilarities (Kruskal, 1964). The quality of the map is summarized by the stress,
+
+$$
+\text{Stress} = \sqrt{\frac{\sum_{i<j} (d_{ij} - \hat{d}_{ij})^2}{\sum_{i<j} d_{ij}^2}},
+$$
+
+where $d_{ij}$ is the distance between points $i$ and $j$ on the map and $\hat{d}_{ij}$ is the target distance from a monotone fit to $BC_{ij}$.
+
+We tested differences among groups with PERMANOVA (Anderson, 2001). For a grouping with $a$ groups, $n_g$ members in group $g$, and $N$ station-years in total,
+
+$$
+SS_T = \frac{1}{N} \sum_{i<j} BC_{ij}^2, \qquad SS_W = \sum_{g=1}^{a} \frac{1}{n_g} \sum_{i<j \in g} BC_{ij}^2, \qquad SS_A = SS_T - SS_W,
+$$
+
+$$
+F = \frac{SS_A / (a - 1)}{SS_W / (N - a)}, \qquad R^2 = \frac{SS_A}{SS_T},
+$$
+
+and the p value is the proportion of random permutations of the group labels that give an $F$ at least as large as the observed one. Impact level belongs to a station and does not change, whereas year varies within a station, so the two need different permutation schemes. For year and for the impact by year interaction we permuted year labels within each station (999 permutations, though with two years per station only 512 arrangements exist, so the smallest possible p value is about 0.004). For impact level we averaged each station's two years and permuted whole stations among groups (9,999 permutations). We checked the assumption of similar spread within groups with a test of multivariate dispersion.
+
+### Distance to the controls
+
+For station $s$ in year $t$ we defined the distance to control as the mean dissimilarity to the three NI stations sampled that year, and the background as the mean dissimilarity over the three pairs of NI stations,
+
+$$
+D_{st} = \frac{1}{3} \sum_{c \in \text{NI}} BC\big((s,t),(c,t)\big), \qquad B_t = \frac{1}{3} \sum_{c < c'} BC\big((c,t),(c',t)\big),
+$$
+
+and the gap as $G_{st} = D_{st} - B_t$. A recovering station should have a gap that shrinks toward zero, which means a distance close to the background and not close to zero. We modelled the gap for HI and MI stations with a linear mixed model,
+
+$$
+G_{st} = \beta_{g(s)} + \gamma_{g(s)} (t - 2010) + u_s + \varepsilon_{st}, \qquad u_s \sim N(0, \sigma_u^2), \quad \varepsilon_{st} \sim N(0, \sigma^2),
+$$
+
+where $g(s)$ is the impact level of station $s$, $\beta_g$ is the average gap in 2010, $\gamma_g$ is the change in gap per year, and $u_s$ is a random offset for each station. We also fitted a version with one $\gamma$ shared by HI and MI. The models were fitted by restricted maximum likelihood with the `nlme` package (Pinheiro and Bates, 2000).
+
+### A model of the colonizer share
+
+Colonizer nematodes are those in c-p class 1. For each station-year we counted the colonizer animals $y_{st}$ out of all animals $n_{st}$, summed over the two layers. The 2011 counts are in the data. For 2010 we only have percentages, so we reconstructed each sample's size as the number of animals that turns its percentages into whole numbers, falling back on assuming the rarest taxon was a single animal. The reconstructed sizes are mostly between 90 and 130 animals per layer, with a few much smaller samples, and the reconstruction is approximate, so we refitted the model with all 2010 sizes halved and doubled.
+
+A binomial model would treat every animal as an independent draw with the same chance of being a colonizer, but stations of the same impact level differ by more than that allows. We therefore let each station's true proportion vary around its group mean $p_{st}$, which gives the beta binomial distribution,
+
+$$
+y_{st} \sim \text{BetaBinomial}(n_{st}, p_{st}, \kappa), \qquad
+P(y \mid n, p, \kappa) = \binom{n}{y} \frac{B\big(y + p\kappa,\; n - y + (1-p)\kappa\big)}{B\big(p\kappa,\; (1-p)\kappa\big)},
+$$
+
+where $B$ is the beta function and $\kappa$ controls the extra variation between stations (small values mean more variation, and very large values reduce the model to the binomial). The mean proportion depends on impact level and year through a logistic regression,
+
+$$
+\text{logit}(p_{st}) = a + b_{HI} \, HI_s + b_{MI} \, MI_s + \big(c + d_{HI} \, HI_s + d_{MI} \, MI_s\big)(t - 2010),
+$$
+
+where $HI_s$ and $MI_s$ indicate the impact level of station $s$. The parameter $a$ is the log odds of colonizers at NI stations in 2010, $b_{HI}$ and $b_{MI}$ are the differences from NI in 2010, $c$ is the yearly change at NI stations, and $d_{HI}$ and $d_{MI}$ are the differences between the yearly change at HI or MI stations and that at NI stations. If heavily impacted communities were converging on the controls, their colonizer share would fall relative to the controls and $d_{HI}$ would be negative.
+
+We estimated the seven parameters, collected in $\theta$, by maximum likelihood, minimizing the negative log likelihood
+
+$$
+-\ell(\theta) = -\sum_{s,t} \log P\big(y_{st} \mid n_{st}, p_{st}(\theta), \kappa\big)
+$$
+
+with `optim` using the BFGS method. We compared the beta binomial model with a plain binomial model by AIC. For uncertainty we used profile likelihood intervals. For a parameter $\theta_j$, the profile likelihood fixes $\theta_j$ and maximizes over all the other parameters,
+
+$$
+\ell_p(\theta_j) = \max_{\theta_{-j}} \ell(\theta_j, \theta_{-j}),
+$$
+
+and the 95% interval contains every value of $\theta_j$ with $2\big[\ell(\hat\theta) - \ell_p(\theta_j)\big] \le \chi^2_{1,\,0.95}$, so that the negative log likelihood is no more than about 1.92 above its minimum. We report log odds and odds ratios $\exp(\theta)$.
+
+### Supporting analyses and software
+
+To describe the differences further we ran an environmental principal component analysis, SIMPER (Clarke, 1993) to find which families contribute most to the difference between HI and NI stations, and comparisons of the maturity index (Bongers, 1990) and the index of trophic diversity (Heip et al., 1985). These are described and shown in the Supplement. All analyses used R with the `vegan` (version `r as.character(packageVersion("vegan"))`; Oksanen et al.), `nlme` (version `r as.character(packageVersion("nlme"))`; Pinheiro et al.), `ggplot2` (Wickham, 2016), and tidyverse (Wickham et al., 2019) packages.
+
+## Results
+
+### Communities differ by impact level, and all stations shifted together
+
+```{r}
+#| label: fig-nmds
+#| fig-cap: "Family level community similarity (NMDS of Bray-Curtis dissimilarity, square root percent). Arrows connect each station's 2010 position (circle) to its 2011 position (triangle). Stations that are close together have similar communities."
+include_graphics("outputs/figures/nmds_trajectories.png")
+```
+
+The NMDS map (stress `r sprintf("%.2f", nmds_sum$stress[nmds_sum$transform == "sqrt"])`) arranged the stations by impact level along its horizontal axis in both years, with heavily impacted stations on the left, unimpacted stations on the right, and moderately impacted stations in between (@fig-nmds). Almost every station also moved in the same direction between years, including the unimpacted stations, and by a similar amount (`r sprintf("%.2f", min(chg$bc_2010_to_2011))` to `r sprintf("%.2f", max(chg$bc_2010_to_2011))` in Bray-Curtis units). The heavily impacted stations therefore did not visibly move toward the controls.
+
+```{r}
+#| label: tbl-permanova
+#| tbl-cap: "PERMANOVA results (square root data). Year and impact by year were tested by permuting years within stations, and impact level by permuting whole stations."
+bind_rows(
+  yr  |> mutate(Term = "Year", Scheme = "Within stations"),
+  ixn |> mutate(Term = "Impact x year", Scheme = "Within stations"),
+  imp |> mutate(Term = "Impact level", Scheme = "Whole stations")
+) |>
+  transmute(Term, Permutation = Scheme, `R squared` = R2, F = F, p = fmt_p(`Pr(>F)`)) |>
+  kable(digits = 2)
+```
+
+Impact level explained a large share of the differences among stations (R² = `r sprintf("%.2f", imp$R2)`, p = `r fmt_p(imp$"Pr(>F)")`), and year explained a smaller but detectable share (R² = `r sprintf("%.2f", yr$R2)`, p = `r fmt_p(yr$"Pr(>F)")`; @tbl-permanova). The interaction between impact and year, which asks whether the change over the year differed among impact levels, was not detected (R² = `r sprintf("%.2f", ixn$R2)`, p = `r fmt_p(ixn$"Pr(>F)")`). The dispersion test gave no sign of unequal spread among groups (p = `r fmt_p(bdisp$p[bdisp$transform == "sqrt"])`), although with three stations per group it could only detect large departures. Untransformed data gave the same overall pattern.
+
+### Distance to the controls did not decrease
+
+```{r}
+#| label: fig-distance
+#| fig-cap: "Mean Bray-Curtis dissimilarity between each impacted station and the unimpacted stations. The dashed line is the background, the mean dissimilarity among unimpacted stations."
+include_graphics("outputs/figures/distance_to_control.png")
+```
+
+The background dissimilarity among unimpacted stations was `r sprintf("%.2f", bg_sqrt$background[bg_sqrt$year == 2010])` in 2010 and `r sprintf("%.2f", bg_sqrt$background[bg_sqrt$year == 2011])` in 2011. Heavily impacted stations were the furthest from the controls in both years, and most impacted stations were slightly further from the controls in 2011 than in 2010 (@fig-distance).
+
+```{r}
+#| label: tbl-mixed
+#| tbl-cap: "Estimated change per year in the gap between impacted stations and the controls (mixed model, 12 observations from 6 stations). A negative value would mean moving toward the controls."
+dmodel |>
+  filter(response == "gap", !grepl("^Difference", effect)) |>
+  transmute(
+    Data = recode(transform, sqrt = "Square root", raw = "Untransformed"),
+    Group = sub("Change per year, ", "", effect),
+    `Change per year` = estimate,
+    `95% interval` = sprintf("%.3f to %.3f", lower, upper),
+    p = fmt_p(p)
+  ) |>
+  arrange(desc(Data)) |>
+  kable(digits = 3)
+```
+
+No estimate pointed toward recovery (@tbl-mixed). With square root data the gap increased by about `r sprintf("%.3f", pool_sqrt$estimate)` per year for HI and MI combined (95% interval `r sprintf("%.3f", pool_sqrt$lower)` to `r sprintf("%.3f", pool_sqrt$upper)`), but with untransformed data the estimate was smaller (`r sprintf("%.3f", pool_raw$estimate)`) and its interval included zero (`r sprintf("%.3f", pool_raw$lower)` to `r sprintf("%.3f", pool_raw$upper)`). Because the result depends on the transformation, we conclude that we found no evidence that impacted stations moved closer to the controls, not that they moved away.
+
+### Colonizers carry much of the difference between heavily impacted and unimpacted stations
+
+SIMPER showed that one family, Monhysteridae, accounted for about `r sprintf("%.0f", 100 * simper$cumulative[1])`% of the difference between HI and NI communities, averaging `r sprintf("%.0f", simper$mean_pct_HI[1])`% of the community at HI stations against `r sprintf("%.0f", simper$mean_pct_NI[1])`% at NI stations (Supplementary Figure S5 and Table S2). The c-p classes show the same thing from another angle (@fig-cp). Colonizer animals (c-p 1) made up about `r sprintf("%.0f", cpv(2010, "HI", 1))`% of heavily impacted communities in 2010 and `r sprintf("%.0f", cpv(2011, "HI", 1))`% in 2011, compared with `r sprintf("%.0f", cpv(2010, "NI", 1))`% and `r sprintf("%.0f", cpv(2011, "NI", 1))`% at unimpacted stations, and in both years every heavily impacted station had a larger colonizer share than every unimpacted station. About `r sprintf("%.0f", 100 * cp1g$share_of_cp1_at_HI[1])`% of the colonizers at heavily impacted stations were a single genus, *`r cp1g$genus[1]`*, in the Monhysteridae.
+
+```{r}
+#| label: fig-cp
+#| fig-cap: "Share of each community in each colonizer and persister (c-p) class, from 1 (colonizers) to 5 (persisters), at heavily impacted (HI) and unimpacted (NI) stations. Bars are group means and points are individual stations."
+include_graphics("outputs/figures/cp_composition.png")
+```
+
+The beta binomial model of the colonizer share was much better supported than a plain binomial model (AIC `r sprintf("%.0f", mfit$AIC[mfit$model == "Beta-binomial"])` against `r sprintf("%.0f", mfit$AIC[mfit$model == "Binomial"])`), with $\kappa$ estimated at about `r sprintf("%.0f", sens$kappa[sens$scale_2010_n == 1])`, so stations of the same impact level differ by more than counting error would produce. In 2010 the odds of a colonizer animal were about `r sprintf("%.1f", bHI$odds_ratio)` times higher at heavily impacted than at unimpacted stations (95% profile interval `r sprintf("%.1f", bHI$or_lower)` to `r sprintf("%.1f", bHI$or_upper)`; @tbl-colonizer, @fig-profiles). At unimpacted stations the odds fell sharply over the year, to about `r sprintf("%.2f", cNI$odds_ratio)` of their earlier value (interval `r sprintf("%.2f", cNI$or_lower)` to `r sprintf("%.2f", cNI$or_upper)`), a drop in the fitted proportion from about `r sprintf("%.0f", fp("NI", 2010))`% to `r sprintf("%.0f", fp("NI", 2011))`% (@fig-fit). At heavily impacted stations the fitted proportion barely moved (`r sprintf("%.0f", fp("HI", 2010))`% to `r sprintf("%.0f", fp("HI", 2011))`%), so the difference in yearly change was positive ($d_{HI}$ = `r sprintf("%.2f", dHI$estimate)`, profile interval `r sprintf("%.2f", dHI$profile_lower)` to `r sprintf("%.2f", dHI$profile_upper)`) and its interval excluded zero. The moderately impacted stations were intermediate, with intervals that included zero for both the 2010 difference and the yearly change. Halving or doubling the reconstructed 2010 sample sizes hardly changed the results ($\hat{d}_{HI}$ stayed between `r sprintf("%.2f", min(sens$dHI))` and `r sprintf("%.2f", max(sens$dHI))`).
+
+```{r}
+#| label: tbl-colonizer
+#| tbl-cap: "Maximum likelihood estimates of the beta binomial colonizer model on the log odds scale, with 95% profile likelihood intervals and odds ratios."
+est |>
+  transmute(
+    Parameter = parameter,
+    Estimate = sprintf("%.2f", estimate),
+    `95% profile interval` = sprintf("%.2f to %.2f", profile_lower, profile_upper),
+    `Odds ratio (95% interval)` = sprintf("%.2f (%.2f to %.2f)", odds_ratio, or_lower, or_upper)
+  ) |>
+  kable()
+```
+
+```{r}
+#| label: fig-fit
+#| fig-cap: "Observed colonizer proportions at each station and the fitted group means from the beta binomial model."
+include_graphics("outputs/figures/colonizer_fit.png")
+```
+
+```{r}
+#| label: fig-profiles
+#| fig-cap: "Profile likelihoods for the 2010 difference between HI and NI stations (left) and for the difference in yearly change (right). The 95% interval is where the curve lies below the dashed line."
+include_graphics("outputs/figures/colonizer_profiles.png")
+```
+
+## Discussion
+
+Our results do not support the hypothesis that nematode communities at oil impacted stations had begun to resemble unimpacted communities by 2011. Impacted and unimpacted stations hosted different communities in both years, and the difference was carried largely by colonizer nematodes, almost all of them the genus *Halomonhystera*. This is the pattern we would expect if opportunistic nematodes are favored where disturbance is strong (Ridall and Ingels, 2021), and it is consistent with the hydrocarbon gradient across the stations (Supplementary Figure S1). The colonizer share at heavily impacted stations was about as high in 2011 as in 2010, and the distance from impacted to unimpacted stations did not shrink. We cannot attribute the difference to oil, however. We have no data from before the spill, and impact level is partly tangled with location because the heavily impacted stations are clustered at one end of the study area (Supplementary Figure S4).
+
+The most important uncertainty is the shift shared by all stations. The unimpacted stations changed as much as the impacted ones between 2010 and 2011, and the positive $d_{HI}$ reflects the unimpacted stations losing colonizers while the heavily impacted stations did not, not the heavily impacted stations getting worse. This could be a real change across the region, or it could reflect differences between the years in how samples were collected, subsampled, or identified. The two years are stored differently (percentages in 2010 and counts in 2011), the genus lists differ, and we reconstructed the 2010 sample sizes, so we cannot separate these explanations with two years of data. Other limits are the small number of stations (three per group), the dependence of the distance results on the data transformation, and the assumptions of the colonizer model, which treats animals as independent draws given each station's proportion and estimates seven parameters from 18 observations. Models that separate real change from observation error need longer series than ours (Auger-Méthé et al., 2021; Newman et al., 2023), which is why we did not project recovery forward as we first planned.
+
+What a record this short can show is therefore limited. It can show that impacted and unimpacted communities differ and which animals carry the difference, but not how fast recovery proceeds. The most useful next step is a later survey, if one exists and uses comparable methods, because it would allow a recovery rate to be estimated directly and the first two years to be tested against what happened afterward. Further improvements would be to use measured hydrocarbon concentrations as a continuous predictor in the colonizer model in place of the three impact classes, to analyze genera in addition to families once identification is consistent between years, and to return to our original question of whether nematodes recover faster than the rest of the meiofauna.
+
+## Acknowledgments
+
+We thank [data providers and the people who collected and identified the samples], [advisors], and our instructor and classmates for comments on the proposal and draft. [To be completed by the team.]
+
+## AI statement
+
+[Draft for the team to confirm and edit.] We used generative AI tools, mainly a coding assistant inside RStudio (Posit Assistant), to help write and debug the R scripts, to suggest analysis options after our instructor's feedback, and to draft and edit parts of the report text. The team chose the question and the analyses, ran the code, checked the outputs against the data, and revised the text, and we take responsibility for the content.
+
+## Code and data availability
+
+All code used for the analyses and figures is in the project's GitHub repository, https://github.com/tylerirvin543/DWH_Nematode_Recovery_Model, with scripts numbered in the order they are run. The repository contains the cleaned tables in `data/processed`. [Update this statement once permission to share the original dataset is confirmed.]
+
+## Literature cited
+
+Anderson, M. J. (2001). A new method for non-parametric multivariate analysis of variance. *Austral Ecology*, 26, 32-46.
+
+Auger-Méthé, M., Newman, K., Cole, D., Empacher, F., Gryba, R., King, A. A., Leos-Barajas, V., Mills Flemming, J., Nielsen, A., Petris, G., & Thomas, L. (2021). A guide to state-space modeling of ecological time series. *Ecological Monographs*, 91(4), e01470.
+
+Baguley, J. G., Rostami, M. A., Baldrighi, E., Bang, H. W., Dyer, L. A., & Montagna, P. A. (2024). Harpacticoid copepods expand the scope and provide family-level indicators of the Deepwater Horizon oil spill deep-sea impacts. *Marine Pollution Bulletin*, 202, 116343.
+
+Bik, H. M., Halanych, K. M., Sharma, J., & Thomas, W. K. (2012). Dramatic shifts in benthic microbial eukaryote communities following the Deepwater Horizon oil spill. *PLoS ONE*, 7(6), e38550.
+
+Bongers, T. (1990). The maturity index: an ecological measure of environmental disturbance based on nematode species composition. *Oecologia*, 83, 14-19.
+
+Bongers, T., & Ferris, H. (1999). Nematode community structure as a bioindicator in environmental monitoring. *Trends in Ecology & Evolution*, 14, 224-228.
+
+Brannock, P. M., Sharma, J., Bik, H. M., Thomas, W. K., & Halanych, K. M. (2017). Spatial and temporal variation of intertidal nematodes in the northern Gulf of Mexico after the Deepwater Horizon oil spill. *Marine Environmental Research*, 130, 200-212.
+
+Bray, J. R., & Curtis, J. T. (1957). An ordination of the upland forest communities of southern Wisconsin. *Ecological Monographs*, 27, 325-349.
+
+Clarke, K. R. (1993). Non-parametric multivariate analyses of changes in community structure. *Australian Journal of Ecology*, 18, 117-143.
+
+Heip, C., Vincx, M., & Vranken, G. (1985). The ecology of marine nematodes. *Oceanography and Marine Biology: An Annual Review*, 23, 399-489.
+
+Kruskal, J. B. (1964). Nonmetric multidimensional scaling: a numerical method. *Psychometrika*, 29, 115-129.
+
+Montagna, P. A., Baguley, J. G., Cooksey, C., Hartwell, I., Hyde, L. J., Hyland, J. L., Kalke, R. D., Kracker, L. M., Reuscher, M., & Rhodes, A. C. E. (2013). Deep-sea benthic footprint of the Deepwater Horizon blowout. *PLoS ONE*, 8(8), e70540.
+
+Newman, K. B., King, R., Elvira, V., de Valpine, P., McCrea, R. S., & Morgan, B. J. T. (2023). State-space models for ecological time-series data: practical model-fitting. *Methods in Ecology and Evolution*, 14(1), 26-42.
+
+Oksanen, J., et al. vegan: Community Ecology Package. R package.
+
+Pinheiro, J. C., & Bates, D. M. (2000). *Mixed-Effects Models in S and S-PLUS*. Springer.
+
+Pinheiro, J., Bates, D., & R Core Team. nlme: Linear and Nonlinear Mixed Effects Models. R package.
+
+R Core Team. R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.
+
+Rex, M. A., Etter, R. J., Morris, J. S., Crouse, J., McClain, C. R., Johnson, N. A., Stuart, C. T., Deming, J. W., Thies, R., & Avery, R. (2006). Global bathymetric patterns of standing stock and body size in the deep-sea benthos. *Marine Ecology Progress Series*, 317, 1-8.
+
+Ridall, A., & Ingels, J. (2021). Suitability of free-living marine nematodes as bioindicators: status and future considerations. *Frontiers in Marine Science*, 8.
+
+Sharma, J., Baguley, J. G., Montagna, P. A., & Rowe, G. T. (2012). Assessment of longitudinal gradients in nematode communities in the deep northern Gulf of Mexico and concordance with benthic taxa. *International Journal of Oceanography*, 2012, 903018.
+
+Wickham, H. (2016). *ggplot2: Elegant Graphics for Data Analysis*. Springer.
+
+Wickham, H., et al. (2019). Welcome to the tidyverse. *Journal of Open Source Software*, 4(43), 1686.
