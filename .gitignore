@@ -9,9 +9,10 @@
 *_files/
 
 # Rendered documents (shared through Box, rebuilt from the .qmd files)
-/nematode_recovery_paper.docx
+/nematode_recovery_paper*.docx
 /nematode_recovery_supplement.docx
 /nematode_recovery_slides.html
+/nematode_recovery_*.pdf
 
 # Data and course material that stay local
 data/raw/*.xlsx

@@ -26,7 +26,7 @@ library(knitr)
 within  <- read_csv("outputs/tables/permanova_within_station.csv", show_col_types = FALSE)
 between <- read_csv("outputs/tables/permanova_impact_between.csv", show_col_types = FALSE)
 dmodel  <- read_csv("outputs/tables/distance_model_effects.csv", show_col_types = FALSE)
-simper  <- read_csv("outputs/tables/simper_hi_vs_ni.csv", show_col_types = FALSE)
+cp1g    <- read_csv("outputs/tables/cp1_genera_at_hi.csv", show_col_types = FALSE)
 est     <- read_csv("outputs/tables/colonizer_model_estimates.csv", show_col_types = FALSE)
 fitted  <- read_csv("outputs/tables/colonizer_model_fitted.csv", show_col_types = FALSE)
 cp_st   <- read_csv("outputs/tables/cp_composition_stations.csv", show_col_types = FALSE) |>
@@ -134,16 +134,16 @@ Explain PERMANOVA as shuffling labels and asking how often a shuffle separates t
 Report the number carefully: the gap increased by about `r sprintf("%.2f", dmodel$estimate[dmodel$transform == "sqrt" & dmodel$response == "gap" & dmodel$effect == "Change per year, HI and MI pooled"])` per year under square root data, but the untransformed result includes zero. So we say we found no evidence of moving closer, not that they moved away. Twelve observations, six stations.
 :::
 
-## Which families differ most between HI and NI?
+## What kind of nematode differs? Colonizers
 
 ![](outputs/figures/cp_composition.png){fig-align="center" height="440"}
 
-- Monhysteridae accounts for about `r sprintf("%.0f", 100 * simper$cumulative[1])`% of the HI versus NI difference (SIMPER)
+- Each genus has a colonizer-persister (c-p) score: 1 = fast reproducing and disturbance tolerant, 5 = slow reproducing and sensitive
 - Colonizer (c-p 1) animals: about `r sprintf("%.0f", cpv(2010, "HI", 1))`% of HI communities in 2010 and `r sprintf("%.0f", cpv(2011, "HI", 1))`% in 2011, against `r sprintf("%.0f", cpv(2010, "NI", 1))`% and `r sprintf("%.0f", cpv(2011, "NI", 1))`% at controls
-- Nearly all of it is one genus, *Halomonhystera*
+- About `r sprintf("%.0f", 100 * cp1g$share_of_cp1_at_HI[1])`% of the colonizers at HI stations are one genus, *`r cp1g$genus[1]`*, so the pattern rests largely on one organism
 
 ::: notes
-c-p values run from 1 (fast reproducing colonizers) to 5 (slow reproducing persisters). This fits the idea from our proposal that opportunists increase where disturbance is strong, but it rests mostly on one genus and not a gradient across all families.
+This is the clearest difference we found, and it fits the idea from our proposal that opportunists increase where disturbance is strong. Say plainly that it came from looking at the data, so it is exploratory, and that it rests mostly on one genus and not a gradual shift across the whole community. Every HI station had more colonizers than every NI station in both years.
 :::
 
 ## A model for the colonizer share

@@ -1,5 +1,5 @@
 ---
-title: "Supplement: data preparation and supporting analyses"
+title: "Supplement: data preparation"
 subtitle: "Deep sea nematode communities one year after the Deepwater Horizon spill"
 author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
 date: today
@@ -15,25 +15,17 @@ execute:
 ```{r setup}
 library(readr)
 library(dplyr)
-library(tidyr)
 library(knitr)
 
 # Render from the project root so these relative paths work
 clean_log <- read_csv("outputs/tables/data_cleaning_log.csv", show_col_types = FALSE)
-pca_var   <- read_csv("outputs/tables/env_pca_variance.csv", show_col_types = FALSE)
-simper    <- read_csv("outputs/tables/simper_hi_vs_ni.csv", show_col_types = FALSE)
-sfc       <- read_csv("outputs/tables/simper_family_cp.csv", show_col_types = FALSE)
 ```
-
-This supplement describes the data preparation and the supporting analyses behind the main paper. The main analyses are the community comparison, the distance to the controls, and the model of the colonizer share. The material here does not change those results, but it shows where the data came from and helps to explain them: what was cleaned and why, how the environmental measurements line up with impact level, which families carry the differences between groups, and where the stations are.
 
 ## S1. Data preparation
 
-The workbook gives, for each station and year, the nematode composition in two sediment layers, together with summary indices and environmental measurements. The 2010 values are percentages and the 2011 values are counts of roughly 100 animals per sample. Because of this we cannot compare abundance, only composition, and we put every sample on the same scale by converting it to percent of its own total. The two layers at a station come from the same location, so we averaged them and treated each station in each year as one observation. Genus lists differ between years partly because of spelling and identification detail, so cross year comparisons use families.
+The workbook gives, for each station and year, nematode composition in two sediment layers, along with summary indices and environmental measurements. The 2010 values are percentages and the 2011 values are counts of roughly 100 animals per sample, so we compare composition and not abundance, and every sample was converted to percent of its own total. The two layers at a station come from the same spot, so they were averaged and each station in each year was treated as one observation. Genus lists differ between years partly because of spelling and identification detail, so comparisons between years use families.
 
-Every cleaning decision is recorded by the data preparation script and reproduced in Table S1. Several affect how results should be read. The 2010 maturity index row in the workbook repeats one value across many samples, which looks like a copy error, so we recalculated the maturity index from the cleaned data. A few animals were identified only to family in 2011. The hydrocarbon and metal measurements look to be on very different scales in the two years, which is one reason we did not use the environmental variables in the main models.
-
-Some questions about the dataset remain open and bear on how far the results can be pushed. We do not know whether sampling, subsampling, and identification methods were identical in both years, or what units the hydrocarbon and metal measurements use in each year. We also do not know whether later surveys exist that are comparable to these.
+Table S1 reproduces the cleaning log written by the data preparation script. A few entries affect how results should be read. The 2010 maturity index row in the workbook repeats one value across many samples and looks like a copy error, so we recalculated the index from the cleaned data. The maturity index and the index of trophic diversity are calculated from the same genus composition we analyze, so they add no independent information and we did not model them. The hydrocarbon and metal measurements look to be on very different scales in the two years, which is why we did not use environmental variables in the main models.
 
 ```{r cleaning-log}
 clean_log |>
@@ -41,96 +33,6 @@ clean_log |>
   kable(caption = "Table S1. Cleaning decisions and flags recorded during data preparation.")
 ```
 
-## S2. Environmental variables
+## S2. Open questions about the dataset
 
-To check whether the environmental measurements agree with the impact classes, we ran a principal component analysis (PCA) on depth, aluminium, barium, PAH44, total petroleum hydrocarbons, mud content, and organic carbon. A PCA condenses several correlated measurements into a few new axes that capture as much of the variation among stations as possible. We ran it separately for each year because the 2010 and 2011 values appear to be on different scales. Barium, PAH44, and total petroleum hydrocarbons were log transformed, and each variable $v$ was standardized, $z_{sv} = (w_{sv} - \bar{w}_v) / \text{sd}(w_v)$, so that all variables count equally. The axes come from the eigendecomposition of the correlation matrix,
-
-$$
-\mathbf{R} = \mathbf{V} \mathbf{\Lambda} \mathbf{V}^\top,
-$$
-
-the position of station $s$ on axis $m$ is $\sum_v z_{sv} V_{vm}$, and the share of the variation captured by axis $m$ is $\lambda_m / \sum_m \lambda_m$.
-
-```{r pca-fig}
-#| fig-cap: "Figure S1. Principal component analysis of environmental variables, run separately for each year. Arrows show how each variable relates to the two axes, and the percentages show how much of the variation each axis captures."
-include_graphics("outputs/figures/env_pca.png")
-```
-
-In both years the first axis explains most of the variation (`r sprintf("%.0f", 100 * pca_var$prop_variance[pca_var$year == 2010 & pca_var$PC == "PC1"])`% in 2010 and `r sprintf("%.0f", 100 * pca_var$prop_variance[pca_var$year == 2011 & pca_var$PC == "PC1"])`% in 2011), and barium, PAH44, and total petroleum hydrocarbons point in the same direction along it. The heavily impacted stations sit at the hydrocarbon end in both years, while the moderately impacted and unimpacted stations overlap on the other side. The heavily impacted stations therefore stand apart environmentally, but the moderately impacted stations look much like the controls, even though their communities fall between the two groups on the NMDS map in the main paper. Organic carbon also behaves differently between years, lining up with the hydrocarbons in 2011 but not in 2010, which is another reason to check how the environmental data were measured.
-
-## S3. Family composition
-
-Figure S2 shows the composition of the ten most abundant families at each station, which is what the NMDS map in the main paper summarizes. Xyalidae and Monhysteridae make up much of every station, but Monhysteridae takes up a larger share at the heavily impacted stations in both years, while Chromadoridae and Comesomatidae are more prominent at the unimpacted ones. This is the starting point for the SIMPER analysis in section S6 and for the colonizer analysis in the main paper.
-
-```{r comp-fig}
-#| fig-cap: "Figure S2. Percent composition of the ten most abundant nematode families at each station, averaged over the two sediment layers. All remaining families are grouped as Other."
-include_graphics("outputs/figures/family_composition.png")
-```
-
-## S4. Maturity index and trophic diversity
-
-The workbook includes two summary indices that are widely used for nematode communities. If $f_{si}$ is the proportion of genus $i$ at station-year $s$, $v_i$ is its colonizer and persister value, and $\theta_{sj}$ is the proportion of the community in feeding group $j$, then
-
-$$
-MI_s = \sum_i v_i f_{si}, \qquad ITD_s = \sum_{j=1}^{4} \theta_{sj}^2
-$$
-
-(Bongers, 1990; Heip et al., 1985). Low maturity index values indicate communities dominated by opportunistic nematodes. ITD summarizes how evenly the four feeding types are represented, with values near 0.25 meaning all four are equally common and values near 1 meaning one type dominates. Because both indices are calculated from the same genus composition we analyze, they add no independent information, and we do not model them. We show them because they will be familiar to readers of the nematode literature.
-
-```{r idx-fig}
-#| fig-cap: "Figure S3. Maturity index (MI) and index of trophic diversity (ITD) for each station in 2010 and 2011, averaged over the two layers. MI values are recalculated from the cleaned data because the 2010 workbook values appear to contain an error."
-include_graphics("outputs/figures/indices_mi_itd.png")
-```
-
-From 2010 to 2011 the maturity index rose and ITD fell at most moderately impacted and unimpacted stations, while the heavily impacted stations changed in mixed directions. This agrees with the main result that most stations shifted together between years and that the heavily impacted stations did not clearly move toward the controls.
-
-## S5. Station locations
-
-Figure S4 shows where the stations are. The three heavily impacted stations are clustered at the north end of the study area, the unimpacted stations lie mostly to the south and east, and the moderately impacted stations are scattered toward the edges. Because impact level and location are partly tangled together, differences between impact groups could also reflect other features that vary across the area, such as depth or sediment type, and the design cannot fully separate these from the effect of oiling. We raise this in the Discussion of the main paper.
-
-```{r map-fig}
-#| fig-cap: "Figure S4. Station locations (2010 coordinates). No coastline is drawn because the stations all lie within a few kilometres of each other."
-include_graphics("outputs/figures/site_map.png")
-```
-
-## S6. Which families differ most between heavily impacted and unimpacted stations
-
-SIMPER starts from the average Bray-Curtis dissimilarity between the heavily impacted and unimpacted stations (`r sprintf("%.2f", sum(simper$contribution))` here) and splits it into a contribution from each family (Clarke, 1993). For a pair of station-years $i$ (HI) and $j$ (NI), family $k$ contributes
-
-$$
-\delta_{ij,k} = \frac{|y_{ik} - y_{jk}|}{\sum_k (y_{ik} + y_{jk})}, \qquad \sum_k \delta_{ij,k} = BC_{ij},
-$$
-
-where $y_{ik}$ is the square root of the percentage of family $k$ in station-year $i$. SIMPER averages this over all HI and NI pairs, $\bar{\delta}_k = \text{mean}_{i,j} \, \delta_{ij,k}$, and ranks the families by $\bar{\delta}_k$. The share of the difference in Table S2 is $\bar{\delta}_k / \sum_k \bar{\delta}_k$. A family contributes a lot when its abundance differs between the two groups and does so consistently across stations. We treat SIMPER as descriptive and give no p values, because the two years at a station are not independent and there are only three stations per group. As a check we also ranked the families separately within each year, using three heavily impacted and three unimpacted stations each time.
-
-```{r simper-fig}
-#| fig-cap: "Figure S5. The eight families contributing most to the difference between heavily impacted (HI) and unimpacted (NI) communities. Colour shows which group had the higher average abundance."
-include_graphics("outputs/figures/simper_hi_vs_ni.png")
-```
-
-```{r simper-table}
-simper |>
-  slice_head(n = 8) |>
-  left_join(sfc |> select(family, mean_cp), by = "family") |>
-  transmute(
-    Rank = rank,
-    Family = family,
-    `Share of difference (%)` = 100 * (cumulative - lag(cumulative, default = 0)),
-    `Mean % at HI` = mean_pct_HI,
-    `Mean % at NI` = mean_pct_NI,
-    `c-p value` = mean_cp,
-    `Rank in 2010` = rank_2010,
-    `Rank in 2011` = rank_2011
-  ) |>
-  kable(digits = 1, caption = "Table S2. Families contributing most to the HI versus NI difference (square root data for ranking, untransformed percent for the means). The c-p value is the abundance weighted average over each family's genera.")
-```
-
-One family stands out. Monhysteridae accounts for about `r sprintf("%.0f", 100 * simper$cumulative[1])`% of the difference, averaging `r sprintf("%.0f", simper$mean_pct_HI[1])`% of the community at heavily impacted stations compared with `r sprintf("%.0f", simper$mean_pct_NI[1])`% at unimpacted ones, and it ranked first in both years. Its abundance weighted c-p value of `r sprintf("%.1f", sfc$mean_cp[sfc$family == "Monhysteridae"])` places it among the colonizers, which is why we turned to the colonizer share as the target of the main model. Linhomoeidae is also more abundant at heavily impacted stations, while Chromadoridae, Cyatholaimidae, and Comesomatidae are more abundant at unimpacted ones. Beyond Monhysteridae the contributions are fairly evenly spread, so the difference reflects many families shifting a little each. The ranks were not equally stable across years. Xyalidae ranked second in 2010 but much lower in 2011, so the order of the lower ranked families is uncertain. The families more abundant at unimpacted stations do not all have high c-p values (Xyalidae and Comesomatidae are around 2), so the colonizer pattern is driven mostly by one genus and not by a smooth gradient across all families.
-
-## Literature cited
-
-Bongers, T. (1990). The maturity index: an ecological measure of environmental disturbance based on nematode species composition. *Oecologia*, 83, 14-19.
-
-Clarke, K. R. (1993). Non-parametric multivariate analyses of changes in community structure. *Australian Journal of Ecology*, 18, 117-143.
-
-Heip, C., Vincx, M., & Vranken, G. (1985). The ecology of marine nematodes. *Oceanography and Marine Biology: An Annual Review*, 23, 399-489.
+Some questions remain that bear on how far the results can be pushed. We do not know whether sampling, subsampling, and identification methods were the same in both years, which matters because every station, including the controls, shifted between 2010 and 2011. We do not know what units the hydrocarbon and metal measurements use in each year. We also do not know whether later surveys exist that are comparable to these, which would allow recovery to be followed over a longer period.
