@@ -4,7 +4,7 @@ NRES 746 final project (Fall 2026) by Tyler Irvin, Cindy Murillo, and Yazmin Eli
 
 We are asking whether nematode communities at oil impacted deep sea stations in the Gulf of Mexico became more similar to unimpacted stations between 2010 and 2011, after the Deepwater Horizon spill. The data are nematode counts from nine stations (three heavily impacted, three moderately impacted, three unimpacted) sampled in both years, with two sediment layers each.
 
-We first planned a Bayesian state-space simulation, but two sampling years cannot support one, so after feedback from our instructor we switched to comparing communities directly and fitting a likelihood model to the share of colonizer nematodes. The paper is `nematode_recovery_paper.qmd`, with the data cleaning log in `nematode_recovery_supplement.qmd`, and the talk is `nematode_recovery_slides.qmd`.
+We first planned a Bayesian state-space simulation, but two sampling years cannot support one, so after feedback from Kevin Shoemaker we switched to comparing communities directly and fitting a likelihood model to the share of colonizer nematodes. The paper is `nematode_recovery_paper.qmd`, with the data cleaning log in `nematode_recovery_supplement.qmd`, and the talk is `nematode_recovery_slides.qmd`.
 
 ## Folders
 

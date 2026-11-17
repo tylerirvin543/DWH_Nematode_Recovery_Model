@@ -80,7 +80,7 @@ If recovery was under way, we expect the distance from impacted to unimpacted st
 
 The data come from nine stations on the deep seafloor: three heavily impacted (HI), three moderately impacted (MI), and three unimpacted (NI), which act as our controls. Each station was sampled in 2010 and 2011, and at each visit the sediment was split into a surface layer (0 to 1 cm) and a deeper layer (1 to 3 cm), which gives `r nrow(samples)` samples. Nematodes were counted and identified to genus where possible, and always to family.
 
-Two features of the data shaped what follows. The 2010 values are percentages while the 2011 values are counts of roughly 100 animals per sample, so we converted every sample to percent composition. That lets us compare what communities are made of, but not how many animals there are. The genus lists also differ between years (`r n_distinct(genus$genus[genus$year == 2010], na.rm = TRUE)` genera in 2010, `r n_distinct(genus$genus[genus$year == 2011], na.rm = TRUE)` in 2011), partly because of spelling and how finely animals were identified, and left alone that would look like ecological change. We therefore compared years at the family level (`r n_distinct(family$family)` families) and used genera only to assign c-p values. Every cleaning decision is listed in Supplementary Table S1.
+Two features of the data shaped what follows. The 2010 values are percentages while the 2011 values are counts of roughly 100 animals per sample, so we converted every sample to percent composition. That lets us compare what communities are made of, but not how many animals there are. The genus lists also differ between years (`r n_distinct(genus$genus[genus$year == 2010], na.rm = TRUE)` genera in 2010, `r n_distinct(genus$genus[genus$year == 2011], na.rm = TRUE)` in 2011), partly because of spelling and how finely animals were identified, and left alone that would look like ecological change. We therefore compared years at the family level (`r n_distinct(family$family)` families) and used genera only to assign c-p values. The main cleaning steps were small. We treated one genus spelled two ways as a single genus, set aside a few animals that were identified only to family, treated one blank cell as zero, and recalculated the maturity index because the 2010 values in the workbook looked wrong. The cleaning log with every step is in Supplementary Table S1.
 
 The two layers at a station come from the same spot, so they are not independent pieces of evidence, and counting them as separate would overstate how much data we have. Writing $c_{sik}$ for the count (or, in 2010, the percentage) of family $k$ in layer $i$ at station-year $s$, we converted each layer to a percentage and then averaged the two,
 
@@ -91,6 +91,8 @@ $$
 That leaves 18 observations, nine stations each seen twice. Most analyses use $y_{sk} = \sqrt{x_{sk}}$. A few very abundant families can otherwise dominate any measure of difference and hide what happens among the many rarer ones, and the square root turns them down without ignoring them. As a check we repeated the analyses on $x_{sk}$ itself.
 
 ### Comparing whole communities
+
+The equations in this subsection (Bray-Curtis dissimilarity, NMDS stress, and the PERMANOVA statistics) are standard published methods that we applied to our data, not ones we developed. The model equations in the last two subsections are different: we specified those ourselves for this dataset.
 
 To say how different two stations are, we need one number that summarizes dozens of family percentages. We used the Bray-Curtis dissimilarity (Bray and Curtis, 1957),
 
@@ -106,7 +108,7 @@ $$
 \text{Stress} = \sqrt{\frac{\sum_{i<j} (d_{ij} - \hat{d}_{ij})^2}{\sum_{i<j} d_{ij}^2}},
 $$
 
-where $d_{ij}$ is the distance between points $i$ and $j$ on the map and $\hat{d}_{ij}$ is the value that best preserves the rank order of the $BC_{ij}$. As a rough guide, values below about 0.2 are good enough to read the broad layout. The axes have no units, and only the distances between points mean anything.
+where $d_{ij}$ is the distance between points $i$ and $j$ on the map and $\hat{d}_{ij}$ is the value that best preserves the rank order of the $BC_{ij}$. As a rough guide, values below about 0.2 are good enough to read the broad layout. The axes have no units, and only the distances between points mean anything. Stations are fixed sites, so when we say a station moves on the map we mean that its community composition changed, not that it moved in space.
 
 A map can suggest patterns that are not there, especially with nine stations, so we tested the main effects with PERMANOVA (Anderson, 2001). We chose it over an ordinary ANOVA because we are comparing many variables at once and the dissimilarities are not normally distributed, and PERMANOVA makes no such assumption. For a grouping with $a$ groups, $n_g$ members in group $g$, and $N$ station-years in total,
 
@@ -118,25 +120,25 @@ $$
 F = \frac{SS_A / (a - 1)}{SS_W / (N - a)}, \qquad R^2 = \frac{SS_A}{SS_T}.
 $$
 
-Here $R^2$ is the share of all the differences between communities that the grouping accounts for, and $F$ compares between group to within group variation. The p value does not come from a table. We shuffle the group labels at random many times, recompute $F$ each time, and ask what fraction of the shuffles gave an $F$ at least as large as the real one.
+These quantities build on one another, and all of them start from the Bray-Curtis values above. $SS_T$ is the total amount of difference among all the station-years, found by squaring and summing every pairwise $BC_{ij}$. $SS_W$ is the part of that total that sits inside groups (stations of the same impact level, or observations from the same year), and $SS_A$ is what is left, the difference between groups. $F$ divides the between group part by the within group part, each scaled by its degrees of freedom, so a large $F$ means the groups are more different from each other than members of a group are from each other. $R^2$ is the share of the total difference that the grouping accounts for, from 0 to 1. In our data $N = 18$ station-years and $a = 3$ impact levels for the impact test (each station averaged over the two years, so $N = 9$ there) and $a = 2$ years for the year test. The values we got are reported in the Results. NMDS and PERMANOVA use the same dissimilarities for different jobs, NMDS to draw the pattern and PERMANOVA to test it. The p value does not come from a table. We shuffle the group labels at random many times, recompute $F$ each time, and ask what fraction of the shuffles gave an $F$ at least as large as the real one.
 
 How you shuffle matters. Impact level belongs to a station and never changes, while year changes within a station, so the two cannot be shuffled the same way. For year and for the impact by year interaction, which is the term that asks whether change over the year differed among impact levels, we shuffled year labels within each station so that each station's pair of observations stayed together (999 permutations). With two years per station there are only 512 distinct arrangements, so the smallest p value we can get is about 0.004. For impact level we averaged each station's two years and shuffled whole stations among groups (9,999 permutations). PERMANOVA can also mistake differences in spread for differences in location, so we checked that groups were similarly spread with a test of multivariate dispersion.
 
 ### Distance to the controls
 
-The analyses above describe all stations together. Our first question is narrower: did impacted stations get closer to the controls? Following our instructor's suggestion, we measured this directly. For station $s$ in year $t$, the distance to control is the mean dissimilarity to the three NI stations sampled that year. Controls differ from one another too, so we also need a yardstick for normal variation, which we call the background: the mean dissimilarity over the three pairs of NI stations. The gap is the distance minus the background,
+The analyses above describe all stations together. Our first question is narrower: did impacted stations get closer to the controls? Following a suggestion from Kevin Shoemaker, we measured this directly, using the same Bray-Curtis values as above. For station $s$ in year $t$, the distance to control is the mean dissimilarity to the three NI stations sampled that year. Controls differ from one another too, so we also need a yardstick for normal variation, which we call the background: the mean dissimilarity over the three pairs of NI stations. The gap is the distance minus the background,
 
 $$
 D_{st} = \frac{1}{3} \sum_{c \in \text{NI}} BC\big((s,t),(c,t)\big), \qquad B_t = \frac{1}{3} \sum_{c < c'} BC\big((c,t),(c',t)\big), \qquad G_{st} = D_{st} - B_t.
 $$
 
-A recovered station would have a gap near zero, meaning it sits about as far from the controls as controls sit from each other, and not a distance of zero. We modelled the gap, and not the raw distance, because the background itself changed between years and we did not want that to be mistaken for movement by impacted stations. The model was a linear mixed model for the HI and MI stations,
+Here $D_{st}$ is how far station $s$ sits from the controls in year $t$, $B_t$ is how far the controls sit from each other that year, and $G_{st}$ is the excess. All three are averages of the same $BC_{ij}$ values used for the map and PERMANOVA, so this step adds no new measure of difference. It only rearranges those values to answer the question about the controls. A recovered station would have a gap near zero, meaning it sits about as far from the controls as controls sit from each other, and not a distance of zero. We modelled the gap, and not the raw distance, because the background itself changed between years and we did not want that to be mistaken for movement by impacted stations. The model was a linear mixed model for the HI and MI stations,
 
 $$
 G_{st} = \beta_{g(s)} + \gamma_{g(s)} (t - 2010) + u_s + \varepsilon_{st}, \qquad u_s \sim N(0, \sigma_u^2), \quad \varepsilon_{st} \sim N(0, \sigma^2),
 $$
 
-where $g(s)$ is the impact level of station $s$, $\beta_g$ is the average gap in 2010, and $\gamma_g$ is the change in gap per year, which is the quantity of interest. A negative $\gamma_g$ means moving toward the controls. The random offset $u_s$ gives each station its own starting level. Without it, a station that is simply far from the controls in both years would be counted as two independent observations. We also fitted a version with one $\gamma$ shared by HI and MI to gain a little precision. Models were fitted by restricted maximum likelihood with the `nlme` package (Pinheiro and Bates, 2000). With six stations and two years this is 12 observations, and since each station contributes only two points the model is close to a paired comparison. The intervals are therefore wide.
+where $g(s)$ is the impact level of station $s$, $\beta_g$ is the average gap in 2010, and $\gamma_g$ is the change in gap per year, which is the quantity of interest. A negative $\gamma_g$ means the gap is shrinking, so the community is becoming more similar to the controls. In Results, $\gamma_g$ is the "change per year" in the mixed model table. The random offset $u_s$ gives each station its own starting level. Without it, a station that is simply far from the controls in both years would be counted as two independent observations. We also fitted a version with one $\gamma$ shared by HI and MI to gain a little precision. Models were fitted by restricted maximum likelihood with the `nlme` package (Pinheiro and Bates, 2000). With six stations and two years this is 12 observations, and since each station contributes only two points the model is close to a paired comparison. The intervals are therefore wide.
 
 ### A model of the colonizer share
 
@@ -185,7 +187,7 @@ The model rests on several assumptions that we cannot fully check. Animals are t
 include_graphics("outputs/figures/nmds_trajectories.png")
 ```
 
-On the NMDS map (stress `r sprintf("%.2f", nmds_sum$stress[nmds_sum$transform == "sqrt"])`) the stations line up by impact level along the horizontal axis in both years. Heavily impacted stations sit on the left, unimpacted ones on the right, and moderately impacted ones in between (@fig-nmds). Nearly every station also moved the same way between years, unimpacted ones included, and by a similar amount (`r sprintf("%.2f", min(chg$bc_2010_to_2011))` to `r sprintf("%.2f", max(chg$bc_2010_to_2011))` in Bray-Curtis units). The heavily impacted stations did not visibly head toward the controls. They drifted along with everything else.
+On the NMDS map (stress `r sprintf("%.2f", nmds_sum$stress[nmds_sum$transform == "sqrt"])`) the stations line up by impact level along the horizontal axis in both years. Heavily impacted stations sit on the left, unimpacted ones on the right, and moderately impacted ones in between (@fig-nmds). Nearly every station also changed in composition in the same direction between years, unimpacted ones included, and by a similar amount (`r sprintf("%.2f", min(chg$bc_2010_to_2011))` to `r sprintf("%.2f", max(chg$bc_2010_to_2011))` in Bray-Curtis units). The communities at heavily impacted stations did not visibly become more like the controls. They changed in the same way as everything else.
 
 ```{r}
 #| label: tbl-permanova
@@ -214,13 +216,13 @@ The background dissimilarity among unimpacted stations was `r sprintf("%.2f", bg
 
 ```{r}
 #| label: tbl-mixed
-#| tbl-cap: "Change in the gap to the controls per year (mixed model, 6 stations, 12 observations). Negative values mean a station moved toward the controls."
-#| tbl-colwidths: [22, 14, 16, 30, 18]
+#| tbl-cap: "Change in the gap to the controls per year (mixed model, 6 stations, 12 observations). Pooled is HI and MI combined. Negative values mean a station's community became more similar to the controls."
+#| tbl-colwidths: [18, 16, 18, 32, 16]
 dmodel |>
   filter(response == "gap", !grepl("^Difference", effect)) |>
   transmute(
     Data = recode(transform, sqrt = "Sq. root", raw = "Untransf."),
-    Group = sub(" pooled", "", sub("Change per year, ", "", effect)),
+    Group = sub(" pooled", "", sub("HI and MI", "Pooled", sub("Change per year, ", "", effect))),
     `Per year` = estimate,
     `95% CI` = sprintf("(%.3f, %.3f)", lower, upper),
     p = fmt_p(p)
@@ -244,7 +246,7 @@ The c-p classes show where the HI and NI communities differ (@fig-cp). Colonizer
 ```{r}
 #| label: tbl-colonizer
 #| tbl-cap: "Colonizer model estimates (log odds) with 95% profile intervals, and the same values as odds ratios."
-#| tbl-colwidths: [33, 12, 20, 35]
+#| tbl-colwidths: [32, 16, 21, 31]
 est |>
   transmute(
     Parameter = recode(parameter, "a (NI log odds, 2010)" = "a: NI, 2010", "bHI (HI minus NI, 2010)" = "bHI: HI vs NI, 2010", "bMI (MI minus NI, 2010)" = "bMI: MI vs NI, 2010", "c (NI change per year)" = "c: NI, per year", "dHI (HI minus NI, change per year)" = "dHI: HI vs NI, per year", "dMI (MI minus NI, change per year)" = "dMI: MI vs NI, per year"),
@@ -273,7 +275,7 @@ include_graphics("outputs/figures/colonizer_profiles.png")
 
 ## Discussion
 
-We found no support for the idea that nematode communities at oil impacted stations had begun to resemble unimpacted communities by 2011. Impacted and unimpacted stations hosted different communities in both years, and much of that difference came from colonizers, almost all of them *Halomonhystera*. That is what we would expect if opportunistic nematodes are favored where disturbance is strong (Ridall and Ingels, 2021). The colonizer share at heavily impacted stations was about as high in 2011 as in 2010, and the distance from impacted to unimpacted stations did not shrink. We cannot attribute the difference to oil, though. We have no data from before the spill, and impact level is partly tangled with location, since the heavily impacted stations lie close together at one end of the study area, so other things that vary across the area could contribute.
+We found no support for the idea that nematode communities at oil impacted stations had begun to resemble unimpacted communities by 2011. Impacted and unimpacted stations hosted different communities in both years, and much of that difference came from colonizers, almost all of them *Halomonhystera*. That is what we would expect if opportunistic nematodes are favored where disturbance is strong (Ridall and Ingels, 2021). The colonizer share at heavily impacted stations was about as high in 2011 as in 2010, and the distance from impacted to unimpacted stations did not shrink. We cannot attribute the difference to oil, though. We have no data from before the spill, and impact level is partly tangled with location, since the heavily impacted stations lie close together at one end of the study area, so other things that vary across the area could contribute. We looked at where the stations are but did not test for spatial patterns formally, so we cannot separate location from impact level.
 
 The biggest uncertainty is the shift shared by all stations. Unimpacted stations changed as much as impacted ones, and the positive $d_{HI}$ comes from unimpacted stations losing colonizers while heavily impacted stations did not, not from heavily impacted stations getting worse. That could be a real regional change. It could just as well come from differences between the years in how samples were collected, subsampled, or identified. The two years are stored differently, the genus lists differ, and we had to reconstruct the 2010 sample sizes, so two years of data cannot tell these explanations apart. There are also only three stations per group, the distance results depended on the transformation, and the colonizer model estimates seven parameters from 18 observations. Models that separate real change from observation error need longer series than ours (Auger-Méthé et al., 2021; Newman et al., 2023), which is why we dropped the state-space projection we first proposed.
 
@@ -283,7 +285,7 @@ A record this short can show that impacted and unimpacted communities differ and
 
 ## Acknowledgments
 
-We thank [data providers and the people who collected and identified the samples], [advisors], and our instructor and classmates for comments on the proposal and draft. [To be completed by the team.]
+We thank [data providers and the people who collected and identified the samples], [advisors], and our instructor, Kevin Shoemaker, and our classmates for comments on the proposal and draft. [To be completed by the team.]
 
 ## AI statement
 

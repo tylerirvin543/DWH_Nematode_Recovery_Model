@@ -65,7 +65,7 @@ About one minute. Keep this short. The point is that nematodes are a reasonable 
 
 - Working hypothesis: heavily and moderately impacted stations move toward the controls
 - "Recovered" means within the normal range of variation among controls, not identical to a control
-- Original plan was a simulation out to 2022; two sampling years cannot support that, so we changed course after feedback from our instructor
+- Original plan was a simulation out to 2022; two sampling years cannot support that, so we changed course after feedback from Kevin Shoemaker
 
 ::: notes
 Explain that two healthy sites are never identical, so recovery has to be measured against how different the controls are from each other. Mention the change of plan briefly and honestly.
