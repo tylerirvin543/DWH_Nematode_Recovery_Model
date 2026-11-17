@@ -175,7 +175,7 @@ $$
 
 The 95% interval contains every value of $\theta_j$ for which $2\big[\ell(\hat\theta) - \ell_p(\theta_j)\big] \le \chi^2_{1,\,0.95}$, so that the negative log likelihood sits no more than about 1.92 above its minimum. We report estimates on the log odds scale and as odds ratios, $\exp(\theta)$.
 
-The model rests on several assumptions that we cannot fully check. Animals are treated as independent draws given a station's proportion, the reconstructed 2010 sample sizes are treated as known, and seven parameters are estimated from 18 observations. We did not correct for looking at several questions. We carried out all analyses in R with the `vegan` (version `r as.character(packageVersion("vegan"))`; Oksanen et al.), `nlme` (version `r as.character(packageVersion("nlme"))`; Pinheiro et al.), `ggplot2` (Wickham, 2016), and tidyverse (Wickham et al., 2019) packages.
+The model rests on several assumptions that we cannot fully check. Animals are treated as independent draws given a station's proportion, the reconstructed 2010 sample sizes are treated as known, and seven parameters are estimated from 18 observations. We did not correct for looking at several questions. We carried out all analyses in R (R Core Team, 2026) with the `vegan` (version `r as.character(packageVersion("vegan"))`; Oksanen et al., 2026), `nlme` (version `r as.character(packageVersion("nlme"))`; Pinheiro et al., 2026), `ggplot2` (Wickham, 2016), and tidyverse (Wickham et al., 2019) packages.
 
 ## Results
 
@@ -319,13 +319,13 @@ Montagna, P. A., Baguley, J. G., Cooksey, C., Hartwell, I., Hyde, L. J., Hyland,
 
 Newman, K. B., King, R., Elvira, V., de Valpine, P., McCrea, R. S., & Morgan, B. J. T. (2023). State-space models for ecological time-series data: practical model-fitting. *Methods in Ecology and Evolution*, 14(1), 26-42.
 
-Oksanen, J., et al. vegan: Community Ecology Package. R package.
+Oksanen, J., Simpson, G., Blanchet, F., Kindt, R., Legendre, P., Minchin, P., O'Hara, R., Solymos, P., Stevens, M., Szoecs, E., Wagner, H., et al. (2026). vegan: Community Ecology Package. R package version 2.7-6. https://doi.org/10.32614/CRAN.package.vegan
 
 Pinheiro, J. C., & Bates, D. M. (2000). *Mixed-Effects Models in S and S-PLUS*. Springer.
 
-Pinheiro, J., Bates, D., & R Core Team. nlme: Linear and Nonlinear Mixed Effects Models. R package.
+Pinheiro, J., Bates, D., & R Core Team (2026). nlme: Linear and Nonlinear Mixed Effects Models. R package version 3.1-170. https://doi.org/10.32614/CRAN.package.nlme
 
-R Core Team. R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria.
+R Core Team (2026). R: A language and environment for statistical computing. R Foundation for Statistical Computing, Vienna, Austria. https://www.R-project.org/
 
 Rex, M. A., Etter, R. J., Morris, J. S., Crouse, J., McClain, C. R., Johnson, N. A., Stuart, C. T., Deming, J. W., Thies, R., & Avery, R. (2006). Global bathymetric patterns of standing stock and body size in the deep-sea benthos. *Marine Ecology Progress Series*, 317, 1-8.
 
