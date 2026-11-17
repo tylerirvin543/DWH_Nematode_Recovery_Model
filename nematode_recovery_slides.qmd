@@ -12,6 +12,7 @@ format:
   revealjs:
     theme: simple
     slide-number: true
+    smaller: true
     html-math-method: katex
     embed-resources: true
     width: 1280
@@ -100,7 +101,7 @@ Square root transformation stops a few very common families from dominating. We 
 
 ## Communities separate by impact, and everything shifts together
 
-![](outputs/figures/nmds_trajectories.png){fig-align="center" height="520"}
+![](outputs/figures/nmds_trajectories.png){fig-align="center" height="390"}
 
 Arrows run from 2010 to 2011. Heavily impacted stations sit left, controls right. Almost every station moved the same way, including the controls.
 
@@ -130,7 +131,7 @@ Explain PERMANOVA as shuffling labels and asking how often a shuffle separates t
 
 ## Distance to the controls
 
-![](outputs/figures/distance_to_control.png){fig-align="center" height="470"}
+![](outputs/figures/distance_to_control.png){fig-align="center" height="360"}
 
 - Distance = average dissimilarity to the three controls; dashed line is how different controls are from each other
 - No estimate points toward recovery; with square root data the gap grew, but not with untransformed data
@@ -141,7 +142,7 @@ Report the number carefully: the gap increased by about `r sprintf("%.2f", dmode
 
 ## What kind of nematode differs? Colonizers
 
-![](outputs/figures/cp_composition.png){fig-align="center" height="440"}
+![](outputs/figures/cp_composition.png){fig-align="center" height="300"}
 
 - Each genus has a colonizer-persister (c-p) score: 1 = fast reproducing and disturbance tolerant, 5 = slow reproducing and sensitive
 - Colonizer (c-p 1) animals: about `r sprintf("%.0f", cpv(2010, "HI", 1))`% of HI communities in 2010 and `r sprintf("%.0f", cpv(2011, "HI", 1))`% in 2011, against `r sprintf("%.0f", cpv(2010, "NI", 1))`% and `r sprintf("%.0f", cpv(2011, "NI", 1))`% at controls
@@ -156,7 +157,7 @@ This is the clearest difference we found, and it fits the idea from our proposal
 :::: {.columns}
 
 ::: {.column width="45%"}
-![](images/halomonhystera.webp){fig-alt="Line drawing of a male and a female Halomonhystera nematode with scale bars" height="520"}
+![](images/halomonhystera.webp){fig-alt="Line drawing of a male and a female Halomonhystera nematode with scale bars" height="440"}
 :::
 
 ::: {.column width="55%"}
@@ -181,7 +182,10 @@ y_{st} \sim \text{BetaBinomial}(n_{st}, p_{st}, \kappa)
 $$
 
 $$
-\text{logit}(p_{st}) = a + b_{HI} HI_s + b_{MI} MI_s + (c + d_{HI} HI_s + d_{MI} MI_s)(t - 2010)
+\begin{aligned}
+\text{logit}(p_{st}) ={} & a + b_{HI} HI_s + b_{MI} MI_s \\
+& + (c + d_{HI} HI_s + d_{MI} MI_s)(t - 2010)
+\end{aligned}
 $$
 
 - Likelihood written by hand, fitted with `optim`, profile likelihood intervals
@@ -194,15 +198,21 @@ Beta binomial lets each station's true proportion vary around the group mean, wi
 
 ## Colonizer model result
 
-![](outputs/figures/colonizer_fit.png){fig-align="center" height="400"}
+![](outputs/figures/colonizer_fit.png){fig-align="center" height="330"}
 
 - 2010: odds of a colonizer about `r sprintf("%.1f", e_("bHI")$odds_ratio)` times higher at HI than NI (95% interval `r sprintf("%.1f", e_("bHI")$or_lower)` to `r sprintf("%.1f", e_("bHI")$or_upper)`)
 - NI fell from about `r sprintf("%.0f", fp("NI", 2010))`% to `r sprintf("%.0f", fp("NI", 2011))`%; HI stayed near `r sprintf("%.0f", fp("HI", 2010))`% to `r sprintf("%.0f", fp("HI", 2011))`%
 - $d_{HI}$ = `r sprintf("%.2f", e_("dHI")$estimate)` (profile interval `r sprintf("%.2f", e_("dHI")$profile_lower)` to `r sprintf("%.2f", e_("dHI")$profile_upper)`): the gap widened
 
 ::: notes
-The gap widened because the controls dropped, not because colonizers increased at heavily impacted stations. That is the opposite of convergence, so no evidence of recovery in the colonizer share by 2011. We cannot say why the controls changed. Profile likelihood plot is in the backup slide.
+The gap widened because the controls dropped, not because colonizers increased at heavily impacted stations. That is the opposite of convergence, so no evidence of recovery in the colonizer share by 2011. We cannot say why the controls changed. Profile likelihood plot is on the next slide.
 :::
+
+## Profile likelihoods for the colonizer model
+
+![](outputs/figures/colonizer_profiles.png){fig-align="center" height="420"}
+
+The 95% interval is where the curve lies below the dashed line. Left: HI minus NI in 2010. Right: difference in yearly change.
 
 ## What we can and cannot say
 
@@ -229,8 +239,3 @@ Be upfront that the shared shift between years is the main limitation. Two years
 End with the 2023 data point, since a longer time span is what would let us test recovery properly. Invite questions.
 :::
 
-## Backup: profile likelihoods for the colonizer model
-
-![](outputs/figures/colonizer_profiles.png){fig-align="center" height="480"}
-
-The 95% interval is where the curve lies below the dashed line. Left: HI minus NI in 2010. Right: difference in yearly change.
