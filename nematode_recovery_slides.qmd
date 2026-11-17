@@ -3,6 +3,7 @@ title: "Recovery in 1, 2, 3"
 subtitle: "Did deep sea nematode communities near the Deepwater Horizon spill move toward unimpacted sites?"
 author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
 date: today
+institute: "Title image: via vickielester.com (2015); original photographer not identified"
 title-slide-attributes:
   data-background-image: images/oil_slick.jpg
   data-background-size: cover
@@ -148,6 +149,27 @@ Report the number carefully: the gap increased by about `r sprintf("%.2f", dmode
 
 ::: notes
 This is the clearest difference we found, and it fits the idea from our proposal that opportunists increase where disturbance is strong. Say plainly that it came from looking at the data, so it is exploratory, and that it rests mostly on one genus and not a gradual shift across the whole community. Every HI station had more colonizers than every NI station in both years.
+:::
+
+## The colonizer: *Halomonhystera*
+
+:::: {.columns}
+
+::: {.column width="45%"}
+![](images/halomonhystera.webp){fig-alt="Line drawing of a male and a female Halomonhystera nematode with scale bars" height="520"}
+:::
+
+::: {.column width="55%"}
+- Genus in the family Monhysteridae
+- Scored c-p 1 in our data: fast reproducing, tolerates disturbance
+- About `r sprintf("%.0f", 100 * cp1g$share_of_cp1_at_HI[1])`% of the colonizers at HI stations
+- Drawing shows *H. hermesi*, a related species, male (a) and female (b); scale bars 100 µm. Our samples are identified only to genus.
+:::
+
+::::
+
+::: notes
+The drawing is only to show what these animals look like. It is a different species from whatever is in our samples, since we only have genus. Source: original species description, full citation still to add.
 :::
 
 ## A model for the colonizer share
