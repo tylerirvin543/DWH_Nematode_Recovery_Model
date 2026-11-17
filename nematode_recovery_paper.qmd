@@ -56,6 +56,7 @@ bg_sqrt   <- bg |> filter(transform == "sqrt")
 bHI <- e_("bHI"); dHI <- e_("dHI"); cNI <- e_("c (")
 ```
 
+
 ## Abstract
 
 After the 2010 Deepwater Horizon spill, oil reached deep sea sediment in the Gulf of Mexico, and it is not clear how fast the nematode communities that dominate this sediment return to something resembling unimpacted sites. We used nematode composition from nine stations (three heavily impacted, three moderately impacted, three unimpacted) sampled in 2010 and 2011 to ask whether impacted communities moved toward unimpacted ones over a year. Impact level explained much of the variation among stations in both years (PERMANOVA R² = `r sprintf("%.2f", imp$R2)`), but every station, unimpacted ones included, shifted in a similar direction, and the distance from impacted to unimpacted stations did not decrease. The clearest difference in composition was the share of colonizer nematodes, nearly all of them the genus *Halomonhystera*. A beta binomial model fitted by maximum likelihood put the 2010 odds of a colonizer animal at `r sprintf("%.1f", bHI$odds_ratio)` times higher at heavily impacted stations (95% profile interval `r sprintf("%.1f", bHI$or_lower)` to `r sprintf("%.1f", bHI$or_upper)`). By 2011 the gap had widened, because the share fell at unimpacted stations and stayed near `r sprintf("%.0f", fp("HI", 2011))`% at heavily impacted ones. We found no support for recovery by 2011, although two years of data, three stations per group, and a shift common to all stations limit what we can say.
@@ -71,7 +72,7 @@ Tracking recovery properly takes long records, and ours covers two years. We ori
 1. Between 2010 and 2011, did nematode communities at impacted stations become more similar to those at unimpacted stations, judged against how much unimpacted stations differ from each other?
 2. Is the difference between heavily impacted and unimpacted communities carried by colonizer nematodes, and did the colonizer share change differently at heavily impacted stations over the year?
 
-If recovery was under way, we expect the distance from impacted to unimpacted stations to shrink and the colonizer share at heavily impacted stations to fall relative to unimpacted ones. We should say that the second question came out of looking at the data. Colonizers stood out when we compared how community composition differed between heavily impacted and unimpacted stations, so we treat that part of the analysis as exploratory.
+If recovery was under way, we expect the distance from impacted to unimpacted stations to shrink and the colonizer share at heavily impacted stations to fall relative to unimpacted ones. The second question emerged during exploratory analysis, when colonizers stood out as a major source of difference between heavily impacted and unimpacted stations, so that part of the study should be read as exploratory and not confirmatory.
 
 ## Methods
 
@@ -135,7 +136,7 @@ $$
 G_{st} = \beta_{g(s)} + \gamma_{g(s)} (t - 2010) + u_s + \varepsilon_{st}, \qquad u_s \sim N(0, \sigma_u^2), \quad \varepsilon_{st} \sim N(0, \sigma^2),
 $$
 
-where $g(s)$ is the impact level of station $s$, $\beta_g$ is the average gap in 2010, and $\gamma_g$ is the change in gap per year, which is the quantity of interest. A negative $\gamma_g$ means moving toward the controls. The random offset $u_s$ gives each station its own starting level. Without it, a station that is simply far from the controls in both years would be counted as two independent observations. We also fitted a version with one $\gamma$ shared by HI and MI to gain a little precision. Models were fitted by restricted maximum likelihood with the `nlme` package (Pinheiro and Bates, 2000). With six stations and two years this is 12 observations, and since each station contributes only two points the model is close to a paired comparison. The intervals are therefore wide, and we treat the results as rough.
+where $g(s)$ is the impact level of station $s$, $\beta_g$ is the average gap in 2010, and $\gamma_g$ is the change in gap per year, which is the quantity of interest. A negative $\gamma_g$ means moving toward the controls. The random offset $u_s$ gives each station its own starting level. Without it, a station that is simply far from the controls in both years would be counted as two independent observations. We also fitted a version with one $\gamma$ shared by HI and MI to gain a little precision. Models were fitted by restricted maximum likelihood with the `nlme` package (Pinheiro and Bates, 2000). With six stations and two years this is 12 observations, and since each station contributes only two points the model is close to a paired comparison. The intervals are therefore wide.
 
 ### A model of the colonizer share
 
@@ -172,7 +173,7 @@ $$
 
 The 95% interval contains every value of $\theta_j$ for which $2\big[\ell(\hat\theta) - \ell_p(\theta_j)\big] \le \chi^2_{1,\,0.95}$, so that the negative log likelihood sits no more than about 1.92 above its minimum. We report estimates on the log odds scale and as odds ratios, $\exp(\theta)$.
 
-The model rests on several assumptions that we cannot fully check. Animals are treated as independent draws given a station's proportion, the reconstructed 2010 sample sizes are treated as known, and seven parameters are estimated from 18 observations. We also did not correct for having looked at several questions, and because colonizers were chosen after exploring the data, the intervals describe how well the model fits what we saw and are not a confirmatory test. We carried out all analyses in R with the `vegan` (version `r as.character(packageVersion("vegan"))`; Oksanen et al.), `nlme` (version `r as.character(packageVersion("nlme"))`; Pinheiro et al.), `ggplot2` (Wickham, 2016), and tidyverse (Wickham et al., 2019) packages.
+The model rests on several assumptions that we cannot fully check. Animals are treated as independent draws given a station's proportion, the reconstructed 2010 sample sizes are treated as known, and seven parameters are estimated from 18 observations. We did not correct for looking at several questions. We carried out all analyses in R with the `vegan` (version `r as.character(packageVersion("vegan"))`; Oksanen et al.), `nlme` (version `r as.character(packageVersion("nlme"))`; Pinheiro et al.), `ggplot2` (Wickham, 2016), and tidyverse (Wickham et al., 2019) packages.
 
 ## Results
 
@@ -180,7 +181,7 @@ The model rests on several assumptions that we cannot fully check. Animals are t
 
 ```{r}
 #| label: fig-nmds
-#| fig-cap: "Family level community similarity (NMDS of Bray-Curtis dissimilarity, square root percent). Arrows connect each station's 2010 position (circle) to its 2011 position (triangle). Stations that are close together have similar communities."
+#| fig-cap: "NMDS map of the 18 station-years (Bray-Curtis, square root percent). Each arrow runs from a station's 2010 position (circle) to its 2011 position (triangle); points that sit close together have similar families."
 include_graphics("outputs/figures/nmds_trajectories.png")
 ```
 
@@ -188,23 +189,24 @@ On the NMDS map (stress `r sprintf("%.2f", nmds_sum$stress[nmds_sum$transform ==
 
 ```{r}
 #| label: tbl-permanova
-#| tbl-cap: "PERMANOVA results (square root data). Year and impact by year were tested by permuting years within stations, and impact level by permuting whole stations."
+#| tbl-cap: "PERMANOVA on square root data. Year and impact x year were tested by shuffling years within stations, impact level by shuffling whole stations."
+#| tbl-colwidths: [22, 26, 12, 12, 12]
 bind_rows(
   yr  |> mutate(Term = "Year", Scheme = "Within stations"),
   ixn |> mutate(Term = "Impact x year", Scheme = "Within stations"),
   imp |> mutate(Term = "Impact level", Scheme = "Whole stations")
 ) |>
-  transmute(Term, Permutation = Scheme, `R squared` = R2, F = F, p = fmt_p(`Pr(>F)`)) |>
+  transmute(Term, `Shuffled` = Scheme, `R²` = R2, F = F, p = fmt_p(`Pr(>F)`)) |>
   kable(digits = 2)
 ```
 
-PERMANOVA agrees with the map (@tbl-permanova). Impact level accounted for a large share of the differences among stations (R² = `r sprintf("%.2f", imp$R2)`, p = `r fmt_p(imp$"Pr(>F)")`), and year accounted for a smaller but detectable share (R² = `r sprintf("%.2f", yr$R2)`, p = `r fmt_p(yr$"Pr(>F)")`). The impact by year interaction, which is the term that speaks most directly to convergence, was not detected (R² = `r sprintf("%.2f", ixn$R2)`, p = `r fmt_p(ixn$"Pr(>F)")`). The dispersion check raised no concern (p = `r fmt_p(bdisp$p[bdisp$transform == "sqrt"])`), although with three stations per group it could only have caught a large problem. Untransformed data gave the same overall picture.
+PERMANOVA agrees with the map (@tbl-permanova). Impact level accounted for a large share of the differences among stations (R² = `r sprintf("%.2f", imp$R2)`, p = `r fmt_p(imp$"Pr(>F)")`), and year accounted for a smaller but detectable share (R² = `r sprintf("%.2f", yr$R2)`, p = `r fmt_p(yr$"Pr(>F)")`). The impact by year interaction, which is the term that speaks most directly to convergence, was not detected (R² = `r sprintf("%.2f", ixn$R2)`, p = `r fmt_p(ixn$"Pr(>F)")`). The dispersion check raised no concern (p = `r fmt_p(bdisp$p[bdisp$transform == "sqrt"])`), and untransformed data gave the same overall picture.
 
 ### Distance to the controls did not decrease
 
 ```{r}
 #| label: fig-distance
-#| fig-cap: "Mean Bray-Curtis dissimilarity between each impacted station and the unimpacted stations. The dashed line is the background, the mean dissimilarity among unimpacted stations."
+#| fig-cap: "Average distance from each impacted station to the three controls in 2010 and 2011. Dashed line: how far apart the controls are from one another."
 include_graphics("outputs/figures/distance_to_control.png")
 ```
 
@@ -212,27 +214,28 @@ The background dissimilarity among unimpacted stations was `r sprintf("%.2f", bg
 
 ```{r}
 #| label: tbl-mixed
-#| tbl-cap: "Estimated change per year in the gap between impacted stations and the controls (mixed model, 12 observations from 6 stations). A negative value would mean moving toward the controls."
+#| tbl-cap: "Change in the gap to the controls per year (mixed model, 6 stations, 12 observations). Negative values mean a station moved toward the controls."
+#| tbl-colwidths: [22, 14, 16, 30, 18]
 dmodel |>
   filter(response == "gap", !grepl("^Difference", effect)) |>
   transmute(
-    Data = recode(transform, sqrt = "Square root", raw = "Untransformed"),
-    Group = sub("Change per year, ", "", effect),
-    `Change per year` = estimate,
-    `95% interval` = sprintf("%.3f to %.3f", lower, upper),
+    Data = recode(transform, sqrt = "Sq. root", raw = "Untransf."),
+    Group = sub(" pooled", "", sub("Change per year, ", "", effect)),
+    `Per year` = estimate,
+    `95% CI` = sprintf("(%.3f, %.3f)", lower, upper),
     p = fmt_p(p)
   ) |>
   arrange(desc(Data)) |>
   kable(digits = 3)
 ```
 
-None of the estimates pointed toward recovery (@tbl-mixed). With square root data the gap grew by about `r sprintf("%.3f", pool_sqrt$estimate)` per year for HI and MI together (95% interval `r sprintf("%.3f", pool_sqrt$lower)` to `r sprintf("%.3f", pool_sqrt$upper)`). With untransformed data the estimate was smaller, `r sprintf("%.3f", pool_raw$estimate)`, and its interval straddled zero (`r sprintf("%.3f", pool_raw$lower)` to `r sprintf("%.3f", pool_raw$upper)`). Since the answer depends on the transformation, we do not claim that impacted stations moved away from the controls. What we can say is that we found no evidence that they moved closer.
+None of the estimates pointed toward recovery (@tbl-mixed). With square root data the gap grew by about `r sprintf("%.3f", pool_sqrt$estimate)` per year for HI and MI together (95% interval `r sprintf("%.3f", pool_sqrt$lower)` to `r sprintf("%.3f", pool_sqrt$upper)`). With untransformed data the estimate was smaller, `r sprintf("%.3f", pool_raw$estimate)`, and its interval straddled zero (`r sprintf("%.3f", pool_raw$lower)` to `r sprintf("%.3f", pool_raw$upper)`). Because the answer depends on the transformation, the safest reading is that we found no evidence of impacted stations moving closer to the controls.
 
 ### Colonizers carry much of the difference
 
 ```{r}
 #| label: fig-cp
-#| fig-cap: "Share of each community in each colonizer and persister (c-p) class, from 1 (colonizers) to 5 (persisters), at heavily impacted (HI) and unimpacted (NI) stations. Bars are group means and points are individual stations."
+#| fig-cap: "Percent of each community in c-p classes 1 (colonizers) to 5 (persisters) at HI and NI stations. Bars show group means, dots show single stations."
 include_graphics("outputs/figures/cp_composition.png")
 ```
 
@@ -240,13 +243,14 @@ The c-p classes show where the HI and NI communities differ (@fig-cp). Colonizer
 
 ```{r}
 #| label: tbl-colonizer
-#| tbl-cap: "Maximum likelihood estimates of the beta binomial colonizer model on the log odds scale, with 95% profile likelihood intervals and odds ratios."
+#| tbl-cap: "Colonizer model estimates (log odds) with 95% profile intervals, and the same values as odds ratios."
+#| tbl-colwidths: [33, 12, 20, 35]
 est |>
   transmute(
-    Parameter = parameter,
+    Parameter = recode(parameter, "a (NI log odds, 2010)" = "a: NI, 2010", "bHI (HI minus NI, 2010)" = "bHI: HI vs NI, 2010", "bMI (MI minus NI, 2010)" = "bMI: MI vs NI, 2010", "c (NI change per year)" = "c: NI, per year", "dHI (HI minus NI, change per year)" = "dHI: HI vs NI, per year", "dMI (MI minus NI, change per year)" = "dMI: MI vs NI, per year"),
     Estimate = sprintf("%.2f", estimate),
-    `95% profile interval` = sprintf("%.2f to %.2f", profile_lower, profile_upper),
-    `Odds ratio (95% interval)` = sprintf("%.2f (%.2f to %.2f)", odds_ratio, or_lower, or_upper)
+    `Profile 95% CI` = sprintf("(%.2f, %.2f)", profile_lower, profile_upper),
+    `Odds ratio` = sprintf("%.2f (%.2f, %.2f)", odds_ratio, or_lower, or_upper)
   ) |>
   kable()
 ```
@@ -255,7 +259,7 @@ The beta binomial model fit far better than a plain binomial (AIC `r sprintf("%.
 
 ```{r}
 #| label: fig-fit
-#| fig-cap: "Observed colonizer proportions at each station and the fitted group means from the beta binomial model."
+#| fig-cap: "Colonizer proportion at each station (dots) and the beta binomial model's fitted group means (lines)."
 include_graphics("outputs/figures/colonizer_fit.png")
 ```
 
@@ -263,7 +267,7 @@ The difference in yearly change was therefore positive ($d_{HI}$ = `r sprintf("%
 
 ```{r}
 #| label: fig-profiles
-#| fig-cap: "Profile likelihoods for the 2010 difference between HI and NI stations (left) and for the difference in yearly change (right). The 95% interval is where the curve lies below the dashed line."
+#| fig-cap: "Profile likelihoods for bHI (left) and dHI (right). The 95% interval is the stretch of each curve below the dashed line."
 include_graphics("outputs/figures/colonizer_profiles.png")
 ```
 
@@ -273,6 +277,8 @@ We found no support for the idea that nematode communities at oil impacted stati
 
 The biggest uncertainty is the shift shared by all stations. Unimpacted stations changed as much as impacted ones, and the positive $d_{HI}$ comes from unimpacted stations losing colonizers while heavily impacted stations did not, not from heavily impacted stations getting worse. That could be a real regional change. It could just as well come from differences between the years in how samples were collected, subsampled, or identified. The two years are stored differently, the genus lists differ, and we had to reconstruct the 2010 sample sizes, so two years of data cannot tell these explanations apart. There are also only three stations per group, the distance results depended on the transformation, and the colonizer model estimates seven parameters from 18 observations. Models that separate real change from observation error need longer series than ours (Auger-Méthé et al., 2021; Newman et al., 2023), which is why we dropped the state-space projection we first proposed.
 
+Even though recovery could not be quantified, colonizer dominated communities persisting at the most heavily impacted stations a year after the spill suggest that community composition may remain altered for some time after the initial disturbance. If so, taxonomic and functional measures such as the colonizer share could reveal effects that abundance counts alone would miss.
+
 A record this short can show that impacted and unimpacted communities differ and which animals carry the difference, but not how fast recovery proceeds. The most valuable next step is a later survey, if one exists with comparable methods, because it would let us estimate a recovery rate directly and test how well the first two years predict what came after. Measured hydrocarbon concentrations could also replace the three impact classes as a continuous predictor in the colonizer model.
 
 ## Acknowledgments
@@ -281,7 +287,7 @@ We thank [data providers and the people who collected and identified the samples
 
 ## AI statement
 
-[Draft for the team to confirm and edit.] We used generative AI tools, mainly a coding assistant inside RStudio (Posit Assistant), to help write and debug the R scripts, to suggest analysis options after our instructor's feedback, and to draft and edit parts of this text. The team chose the question and the analyses, ran the code, checked the outputs against the data, and revised the text, and we take responsibility for the content.
+We used generative AI tools, mainly Posit Assistant in RStudio, to help write and debug the R scripts, to suggest analysis options, and to draft and edit parts of this text. We chose the question and the analyses, ran the code, checked the results against the data, and revised the writing, and we take responsibility for the content.
 
 ## Code and data availability
 

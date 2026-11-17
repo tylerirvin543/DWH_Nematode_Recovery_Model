@@ -1,6 +1,6 @@
 ---
-title: "Supplement: data preparation"
-subtitle: "Deep sea nematode communities one year after the Deepwater Horizon spill"
+title: "Supplement: notes on the data and methods"
+subtitle: "Draft meeting notes"
 author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
 date: today
 format:
@@ -21,18 +21,41 @@ library(knitr)
 clean_log <- read_csv("outputs/tables/data_cleaning_log.csv", show_col_types = FALSE)
 ```
 
-## S1. Data preparation
+## Data notes
 
-The workbook gives, for each station and year, nematode composition in two sediment layers, along with summary indices and environmental measurements. The 2010 values are percentages and the 2011 values are counts of roughly 100 animals per sample, so we compare composition and not abundance, and every sample was converted to percent of its own total. The two layers at a station come from the same spot, so they were averaged and each station in each year was treated as one observation. Genus lists differ between years partly because of spelling and identification detail, so comparisons between years use families.
-
-Table S1 reproduces the cleaning log written by the data preparation script. A few entries affect how results should be read. The 2010 maturity index row in the workbook repeats one value across many samples and looks like a copy error, so we recalculated the index from the cleaned data. The maturity index and the index of trophic diversity are calculated from the same genus composition we analyze, so they add no independent information and we did not model them. The hydrocarbon and metal measurements look to be on very different scales in the two years, which is why we did not use environmental variables in the main models.
+- 2010 is percentages, 2011 is counts (about 100 animals per sample). So we can compare composition, not abundance.
+- Two layers per station are the same spot, so we averaged them. 9 stations x 2 years = 18 observations.
+- Genus lists differ between years (spelling, how far down animals were identified), so years are compared at family level.
+- 2010 MI row in the workbook repeats one value, looks like a copy error. We recalculated MI. Not used in the main analyses anyway.
+- Hydrocarbon and metal values jump a lot between years, maybe units. Didn't use them.
+- Full cleaning log below (Table S1).
 
 ```{r cleaning-log}
+#| tbl-colwidths: [18, 41, 41]
 clean_log |>
   rename(Step = step, Issue = issue, `What we did` = action) |>
-  kable(caption = "Table S1. Cleaning decisions and flags recorded during data preparation.")
+  kable(caption = "Table S1. Cleaning log from the data prep script.")
 ```
 
-## S2. Open questions about the dataset
+## Methods, one line each (what it is, why we used it)
 
-Some questions remain that bear on how far the results can be pushed. We do not know whether sampling, subsampling, and identification methods were the same in both years, which matters because every station, including the controls, shifted between 2010 and 2011. We do not know what units the hydrocarbon and metal measurements use in each year. We also do not know whether later surveys exist that are comparable to these, which would allow recovery to be followed over a longer period.
+- **Percent, layer average, family level, square root.** Percent is the only scale 2010 and 2011 share. Averaging layers avoids pretending we have 36 stations. Family level stops naming differences looking like change. Square root keeps a few big families from deciding everything (a log would over-boost rare ones, no transform lets one family dominate). Also ran it untransformed.
+- **Bray-Curtis.** One number from 0 to 1 for how different two communities are. Ignores families missing from both samples, which Euclidean distance doesn't. Standard for community data.
+- **NMDS.** A map so similar stations sit close together. For looking, not testing. Used instead of PCA because it works from the dissimilarities and only needs their rank order. Stress 0.11, fine for the broad layout.
+- **PERMANOVA.** Do impact level or year separate the communities more than shuffled labels do? Used instead of ANOVA because we have dozens of correlated, zero-heavy families. Impact never changes within a station, so impact = shuffle whole stations, year and impact x year = shuffle years within a station. Dispersion check because PERMANOVA can confuse spread with position.
+- **Distance to controls + mixed model.** Distance = average dissimilarity to the 3 controls. Background = how different controls are from each other (recovery means reaching that, not zero). Gap = distance minus background, because the background moved between years. Station is a random effect so one station's two points aren't counted as independent. REML for the variance. Only 12 observations, basically a paired comparison, so wide intervals.
+- **Colonizer model (beta binomial, ML).** Colonizers (c-p 1) out of all animals per station-year. Beta binomial, not binomial, because stations of the same impact level differ more than counting error allows (AIC 147 vs 200). Logistic link so effects read as odds ratios. Wrote the likelihood by hand, fit with `optim`, profile intervals because the likelihood is lopsided with 18 points. Refit with the 2010 sample sizes halved and doubled, no real change.
+
+## Left out, and why
+
+- State-space model from the proposal: two years can't separate real change from measurement error.
+- Environmental variables: scales look different across years.
+- MI and ITD: calculated from the same genus data, so nothing new.
+- No multiple comparison correction. The colonizer question came from looking at the data, so its intervals describe fit, they are not a confirmatory test.
+
+## Questions for the meeting
+
+- What, even small, differed between 2010 and 2011 (sieve, subsampling, who identified, counting)? The controls shifted as much as the impacted stations.
+- Were these stations sampled again after 2011?
+- What units are the hydrocarbon and metal values in each year?
+- Can the cleaned data go on a public GitHub repo, pending the grant and her advisors?

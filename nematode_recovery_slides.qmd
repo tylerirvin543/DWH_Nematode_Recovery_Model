@@ -3,6 +3,10 @@ title: "Recovery in 1, 2, 3"
 subtitle: "Did deep sea nematode communities near the Deepwater Horizon spill move toward unimpacted sites?"
 author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
 date: today
+title-slide-attributes:
+  data-background-image: images/oil_slick.jpg
+  data-background-size: cover
+  data-background-opacity: "0.3"
 format:
   revealjs:
     theme: simple
