@@ -1,5 +1,5 @@
 ---
-title: "Deep sea nematode communities one year after the Deepwater Horizon spill: little evidence of recovery, and more colonizers where oiling was heavy"
+title: "Deep-sea nematode communities in the first year after the Deepwater Horizon spill: little evidence of recovery and a high share of colonizers at heavily impacted sites"
 author: "Yazmin Elizarraraz, Cindy Murillo, Tyler Irvin"
 date: today
 format:
