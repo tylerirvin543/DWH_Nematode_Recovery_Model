@@ -235,6 +235,10 @@ Be upfront that the shared shift between years is the main limitation. Two years
 
 **Questions?**
 
+::: {.aside}
+Paper (draft): *Deep-sea nematode communities in the first year after the Deepwater Horizon spill: little evidence of recovery and a high share of colonizers at heavily impacted sites*. Elizarraraz, Murillo and Irvin.
+:::
+
 ::: notes
 End with the 2023 data point, since a longer time span is what would let us test recovery properly. Invite questions.
 :::

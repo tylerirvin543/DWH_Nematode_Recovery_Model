@@ -204,10 +204,13 @@ bind_rows(
 
 PERMANOVA agrees with the map (@tbl-permanova). Impact level accounted for a large share of the differences among stations (R² = `r sprintf("%.2f", imp$R2)`, p = `r fmt_p(imp$"Pr(>F)")`), and year accounted for a smaller but detectable share (R² = `r sprintf("%.2f", yr$R2)`, p = `r fmt_p(yr$"Pr(>F)")`). The impact by year interaction, which is the term that speaks most directly to convergence, was not detected (R² = `r sprintf("%.2f", ixn$R2)`, p = `r fmt_p(ixn$"Pr(>F)")`). The dispersion check raised no concern (p = `r fmt_p(bdisp$p[bdisp$transform == "sqrt"])`), and untransformed data gave the same overall picture.
 
+{{< pagebreak >}}
+
 ### Distance to the controls did not decrease
 
 ```{r}
 #| label: fig-distance
+#| out-width: 70%
 #| fig-cap: "Average distance from each impacted station to the three controls in 2010 and 2011. Dashed line: how far apart the controls are from one another."
 include_graphics("outputs/figures/distance_to_control.png")
 ```
