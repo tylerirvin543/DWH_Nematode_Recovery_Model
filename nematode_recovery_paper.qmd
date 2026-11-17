@@ -285,7 +285,7 @@ A record this short can show that impacted and unimpacted communities differ and
 
 ## Acknowledgments
 
-We thank [data providers and the people who collected and identified the samples], [advisors], and our instructor, Kevin Shoemaker, and our classmates for comments on the proposal and draft. [To be completed by the team.]
+We thank the research team that collected and identified the nematode samples and made the data available to us, and their advisors for allowing us to use them. We also thank Kevin Shoemaker for guidance on the analysis, and our classmates Connor Ball, Spencer Hurt, and Tanis Mcdonnell for their comments on our proposal.
 
 ## AI statement
 
@@ -293,7 +293,7 @@ We used generative AI tools, mainly Posit Assistant in RStudio, to help write an
 
 ## Code and data availability
 
-All code for the analyses and figures is in the project's GitHub repository, https://github.com/tylerirvin543/DWH_Nematode_Recovery_Model, with scripts numbered in the order they are run. The repository contains the cleaned tables in `data/processed`. [Update this statement once permission to share the original dataset is confirmed.]
+All code for the analyses and figures is in the project's GitHub repository, https://github.com/tylerirvin543/DWH_Nematode_Recovery_Model, with scripts numbered in the order they are run. The original workbook is not included. The cleaned tables are included only if the data owners agree to public release, and are otherwise available from the authors on request.
 
 ## Literature cited
 
