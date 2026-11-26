@@ -65,9 +65,12 @@ About one minute. Keep this short. The point is that nematodes are a reasonable 
 
 **Between 2010 and 2011, did nematode communities at oil impacted stations become more similar to those at unimpacted stations?**
 
-- Working hypothesis: heavily and moderately impacted stations move toward the controls
-- "Recovered" means within the normal range of variation among controls, not identical to a control
-- Original plan was a simulation out to 2022; two sampling years cannot support that, so we changed course after feedback from Kevin Shoemaker
+- H1: impacted communities move toward the controls, so their distance to the controls shrinks
+- H2: moderately impacted (MI) stations fall between heavily impacted (HI) and unimpacted (NI) ones
+- H3: Ba, PAH44 and TPH line up with community differences, and Al (a reference metal) does not
+- H4 (exploratory): colonizer nematodes make up more of HI communities, and that share falls toward the controls if recovery is under way
+- "Recovered" means within the normal variation among controls, so a recovered station need not be identical to a control
+- Our original plan was a simulation out to 2022, which two sampling years cannot support, so we changed course after feedback from Kevin Shoemaker
 
 ::: notes
 Explain that two healthy sites are never identical, so recovery has to be measured against how different the controls are from each other. Mention the change of plan briefly and honestly.
@@ -126,7 +129,7 @@ bind_rows(
 ```
 
 - Impact level separates communities clearly in 2011 and borderline in 2010 (the 2010 result depends on the transformation)
-- Communities changed between years, but the change did not clearly differ by impact level, and that is the term most relevant to recovery
+- Communities changed between years, but the change did not clearly differ by impact level (the term most relevant to recovery)
 - Three stations per group means low power
 
 ::: notes
@@ -138,7 +141,7 @@ Explain PERMANOVA as shuffling labels and asking how often a shuffle separates t
 ![](outputs/figures/genus_pcoa_env.png){fig-align="center" height="360"}
 
 - PCoA of the Bray-Curtis distances, with Al, Ba, PAH44 and TPH fitted as arrows
-- Ba, PAH44 and TPH line up with the community axes in both years (R squared `r sprintf("%.2f", min(envfit$r2[envfit$variable != "Al"]))` to `r sprintf("%.2f", max(envfit$r2[envfit$variable != "Al"]))`); Al does not
+- Ba, PAH44 and TPH line up with the community axes in both years (R squared `r sprintf("%.2f", min(envfit$r2[envfit$variable != "Al"]))` to `r sprintf("%.2f", max(envfit$r2[envfit$variable != "Al"]))`); Al does not, as hypothesized (H3)
 - Impact class and the hydrocarbon gradient overlap so much that nine stations cannot separate them
 
 ::: notes
@@ -152,6 +155,7 @@ The hydrocarbon variables load together on one PCA axis, so they act as a single
 - Gap = average dissimilarity to the three controls minus how different the controls are from each other (zero = as close as controls are to each other)
 - Every impacted station had a larger gap in 2011; HI gap grew about `r sprintf("%.2f", gpool("year0")$estimate)` per year (95% interval `r sprintf("%.2f", gpool("year0")$lower)` to `r sprintf("%.2f", gpool("year0")$upper)`)
 - With untransformed data the estimate is `r sprintf("%.2f", gpool("year0", "raw")$estimate)` and the interval includes zero
+- MI stations had a smaller gap than HI stations in both years (H2), and changed by a similar amount
 
 ::: notes
 A mixed model within each year, with station as a random effect and the two layers as repeated measures, then one model for both years. Report the number carefully: the direction is the same in both versions and none points toward recovery, but the size of the increase depends on the transformation. So we say we found no evidence of moving closer. Twelve observations per year, six stations.
@@ -166,7 +170,7 @@ A mixed model within each year, with station as a random effect and the two laye
 - About `r sprintf("%.0f", 100 * cp1g$share_of_cp1_at_HI[1])`% of the colonizers at HI stations are one genus, *`r cp1g$genus[1]`*, so the pattern rests largely on one organism
 
 ::: notes
-This is the clearest difference we found, and it fits the idea from our proposal that opportunists increase where disturbance is strong. Say plainly that it came from looking at the data, so it is exploratory, and that it rests mostly on one genus and not a gradual shift across the whole community. Every HI station had more colonizers than every NI station in both years.
+This is the clearest difference we found, and it fits the idea from our proposal that opportunists increase where disturbance is strong. Say plainly that it came from looking at the data, so it is exploratory, and that it rests mostly on one genus instead of a gradual shift across the whole community. Every HI station had more colonizers than every NI station in both years.
 :::
 
 ## The colonizer: *Halomonhystera*
@@ -220,20 +224,15 @@ Beta binomial lets each station's true proportion vary around the group mean, wi
 - 2010: odds of a colonizer about `r sprintf("%.1f", e_("bHI")$odds_ratio)` times higher at HI than NI (95% interval `r sprintf("%.1f", e_("bHI")$or_lower)` to `r sprintf("%.1f", e_("bHI")$or_upper)`)
 - NI fell from about `r sprintf("%.0f", fp("NI", 2010))`% to `r sprintf("%.0f", fp("NI", 2011))`%; HI stayed near `r sprintf("%.0f", fp("HI", 2010))`% to `r sprintf("%.0f", fp("HI", 2011))`%
 - $d_{HI}$ = `r sprintf("%.2f", e_("dHI")$estimate)` (profile interval `r sprintf("%.2f", e_("dHI")$profile_lower)` to `r sprintf("%.2f", e_("dHI")$profile_upper)`): the HI and NI colonizer shares moved apart
+- MI stations fell in between (fitted share `r sprintf("%.0f", fp("MI", 2010))`% to `r sprintf("%.0f", fp("MI", 2011))`%), as in H2
 
 ::: notes
-The colonizer shares moved apart because the controls dropped, not because colonizers increased at heavily impacted stations. That is the opposite of convergence, so no evidence of recovery in the colonizer share by 2011. We cannot say why the controls changed. Profile likelihood plot is on the next slide.
+The colonizer shares moved apart because the controls dropped. Colonizers did not increase at heavily impacted stations. That is the opposite of convergence, so there is no evidence of recovery in the colonizer share by 2011. We cannot say why the controls changed. The profile likelihood plot is in the backup slides.
 :::
-
-## Profile likelihoods for the colonizer model
-
-![](outputs/figures/colonizer_profiles.png){fig-align="center" height="420"}
-
-The 95% interval is where the curve lies below the dashed line. Left: HI minus NI in 2010. Right: difference in yearly change.
 
 ## What we can and cannot say
 
-- **Supported:** impacted and unimpacted stations hosted different communities in both years, with more colonizers where impact was heavy
+- **Supported:** impacted and unimpacted stations hosted different communities in both years, with more colonizers where impact was heavy, and MI stations fell between HI and NI
 - **Not supported:** recovery by 2011; but one year is a short time, so this does not show recovery is absent
 - **Limits:**
   - The controls shifted as much as the impacted stations, which could be a real regional change or a difference in sampling or identification between years
@@ -248,7 +247,7 @@ Be upfront that the shared shift between years is the main limitation. Two years
 
 - Questions about the dataset: were sampling and identification the same in both years, and were hydrocarbons and metals measured the same way (the control values differ a lot between years)?
 - Do later surveys exist (for example 2023)? That would allow a recovery rate to be estimated and tested against a prediction
-- Compare *Halomonhystera* and the other differing families with published responses to oil
+- Compare *Halomonhystera* and the other differing genera with published responses to oil
 
 **Questions?**
 
@@ -260,3 +259,8 @@ Paper (draft): *Deep-sea nematode communities in the first year after the Deepwa
 End with the 2023 data point, since a longer time span is what would let us test recovery properly. Invite questions.
 :::
 
+## Backup: profile likelihoods for the colonizer model
+
+![](outputs/figures/colonizer_profiles.png){fig-align="center" height="420"}
+
+The 95% interval is where the curve lies below the dashed line. Left: HI minus NI in 2010. Right: difference in yearly change.
