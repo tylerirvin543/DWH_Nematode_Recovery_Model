@@ -62,3 +62,16 @@ clean_log |>
 - Were these stations sampled again after 2011?
 - What units and methods were used for the hydrocarbon and metal values in each year? The control stations differ a lot between years (for example PAH44).
 - Can the cleaned data go on a public GitHub repo, pending the grant and her advisors?
+
+## Supplementary figures and tables (referenced in the paper)
+
+![Figure S1. PCA of the standardized environmental variables (Al, log Ba, log PAH44, log TPH) at the nine stations in each year.](outputs/figures/env_pca_by_year.png)
+
+![Figure S2. Profile likelihoods for bHI (left) and dHI (right) in the colonizer model. The 95% interval is the stretch of each curve below the dashed line.](outputs/figures/colonizer_profiles.png)
+
+```{r envfit-table}
+#| tbl-colwidths: [20, 30, 25, 25]
+read_csv("outputs/tables/genus_pcoa_envfit.csv", show_col_types = FALSE) |>
+  transmute(Year = year, Variable = variable, `R squared` = r2, p = ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p))) |>
+  kable(digits = 2, caption = "Table S2. Environmental variables fitted to the first two PCoA axes of the genus Bray-Curtis dissimilarities (envfit, 9,999 permutations).")
+```
