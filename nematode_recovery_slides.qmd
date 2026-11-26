@@ -219,10 +219,10 @@ Beta binomial lets each station's true proportion vary around the group mean, wi
 
 - 2010: odds of a colonizer about `r sprintf("%.1f", e_("bHI")$odds_ratio)` times higher at HI than NI (95% interval `r sprintf("%.1f", e_("bHI")$or_lower)` to `r sprintf("%.1f", e_("bHI")$or_upper)`)
 - NI fell from about `r sprintf("%.0f", fp("NI", 2010))`% to `r sprintf("%.0f", fp("NI", 2011))`%; HI stayed near `r sprintf("%.0f", fp("HI", 2010))`% to `r sprintf("%.0f", fp("HI", 2011))`%
-- $d_{HI}$ = `r sprintf("%.2f", e_("dHI")$estimate)` (profile interval `r sprintf("%.2f", e_("dHI")$profile_lower)` to `r sprintf("%.2f", e_("dHI")$profile_upper)`): the gap widened
+- $d_{HI}$ = `r sprintf("%.2f", e_("dHI")$estimate)` (profile interval `r sprintf("%.2f", e_("dHI")$profile_lower)` to `r sprintf("%.2f", e_("dHI")$profile_upper)`): the HI and NI colonizer shares moved apart
 
 ::: notes
-The gap widened because the controls dropped, not because colonizers increased at heavily impacted stations. That is the opposite of convergence, so no evidence of recovery in the colonizer share by 2011. We cannot say why the controls changed. Profile likelihood plot is on the next slide.
+The colonizer shares moved apart because the controls dropped, not because colonizers increased at heavily impacted stations. That is the opposite of convergence, so no evidence of recovery in the colonizer share by 2011. We cannot say why the controls changed. Profile likelihood plot is on the next slide.
 :::
 
 ## Profile likelihoods for the colonizer model
