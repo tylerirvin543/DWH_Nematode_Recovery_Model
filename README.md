@@ -8,7 +8,7 @@ Short answer from the data we have: impacted and unimpacted stations hosted diff
 
 ## Data are not in this repository
 
-The data are proprietary. This repository contains code only. The original workbook, the cleaned tables, and every table derived from them are excluded by `.gitignore`. Figures and rendered documents show results, not the underlying records.
+The data are proprietary. This repository contains code only. The original workbook, the cleaned tables, and everything derived from them (results tables, figures, and the rendered Word and HTML documents) are excluded by `.gitignore`.
 
 To reproduce the analysis you need the original workbook, which has to come from the data owners (Yazmin Elizarraraz can say who to ask). Save it as:
 
@@ -36,7 +36,7 @@ Nine stations on the deep seafloor: three heavily impacted (HI), three moderatel
 - `data/raw` holds the original workbook (not tracked)
 - `data/processed` holds the tidy tables made by script 01 (not tracked)
 - `scripts` holds the analysis, numbered in the order to run them
-- `outputs/figures` holds the figures (tracked)
+- `outputs/figures` holds the figures made by the scripts (not tracked)
 - `outputs/tables` holds the results tables made by the scripts (not tracked)
 - `docs` holds the course guidelines and our proposal
 
@@ -62,7 +62,7 @@ The paper reports scripts 04 to 07. Scripts 02 and 03 are the first, family leve
 - `nematode_recovery_supplement.qmd` holds the data notes, one line per method, and the cleaning log
 - `nematode_recovery_slides.qmd` is the talk (reveal.js)
 
-Render them with Quarto from the project root after running the scripts, for example `quarto render nematode_recovery_paper.qmd`. The rendered Word and HTML files are committed for convenience, but they are rebuilt from the `.qmd` files and the local data. The slides also use images in `images/`, which are not tracked.
+Render them with Quarto from the project root after running the scripts, for example `quarto render nematode_recovery_paper.qmd`. The rendered Word and HTML files are not tracked, because they contain results derived from the data. The slides also use images in `images/`, which are not tracked.
 
 ## R packages
 

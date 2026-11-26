@@ -9,17 +9,22 @@
 *_files/
 *.knit.md
 
-# Data are proprietary: code only goes to GitHub. Raw, processed and derived
-# tables stay local and are rebuilt by the scripts (folders kept with .gitkeep).
+# Code only goes to GitHub. The data are proprietary, so raw data, processed
+# data, and everything derived from them (tables, figures, rendered documents)
+# stay local and are rebuilt by the scripts. Folders are kept with .gitkeep.
 data/raw/*
 data/processed/*
 outputs/tables/*
+outputs/figures/*
 !data/raw/.gitkeep
 !data/processed/.gitkeep
 !outputs/tables/.gitkeep
+!outputs/figures/.gitkeep
 
-# Rendered documents that are not the current versions
-/nematode_recovery_paper_print.docx
+# Rendered documents (rebuilt from the .qmd files)
+/nematode_recovery_paper*.docx
+/nematode_recovery_supplement.docx
+/nematode_recovery_slides.html
 /nematode_recovery_*.pdf
 /Draft Nematode project.docx
 
