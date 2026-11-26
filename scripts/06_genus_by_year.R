@@ -32,6 +32,7 @@
 #   outputs/tables/env_pca_loadings.csv          loadings per year
 #   outputs/tables/env_pca_scores.csv            PC scores per station and year
 #   outputs/tables/genus_permanova_pooled.csv    year and impact x year, impact (genus level)
+#   outputs/tables/genus_nmds_stress.csv         NMDS stress per year
 #   outputs/figures/genus_nmds_by_year.png
 #   outputs/figures/env_pca_by_year.png
 #
@@ -163,6 +164,8 @@ nmds_pts <- bind_rows(lapply(c("2010_sqrt", "2011_sqrt"), \(n) {
     bind_cols(r$meta |> select(year, station, impact)) |>
     mutate(stress = nm$stress)
 }))
+
+write_csv(distinct(nmds_pts, year, stress), "outputs/tables/genus_nmds_stress.csv")
 
 ggsave("outputs/figures/genus_nmds_by_year.png",
   ggplot(nmds_pts, aes(NMDS1, NMDS2, colour = impact)) +
