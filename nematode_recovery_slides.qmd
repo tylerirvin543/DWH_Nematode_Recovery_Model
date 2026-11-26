@@ -82,11 +82,11 @@ Explain that two healthy sites are never identical, so recovery has to be measur
 - Sampled in 2010 and 2011, two sediment layers each (0 to 1 cm and 1 to 3 cm)
 - Nematodes counted and identified to genus (a handful of animals only to family were set aside)
 - Four sediment measurements per station and year: aluminum (Al), barium (Ba), PAH44, and total petroleum hydrocarbons (TPH)
-- Each year analysed on its own, with its own controls; layers averaged, so 9 stations per year
+- Each year analyzed on its own, with its own controls; layers averaged, so 9 stations per year
 - 2010 values are percentages and 2011 values are counts, so we compare composition, not abundance
 
 ::: notes
-Mention that the layers come from the same spot, so they are not independent. Genus lists differ between years partly because of naming and identification detail, which is one reason each year is analysed separately; the one analysis that compares years was repeated on only the genera found in both. The six animals without a genus were all at one station in 2011. All cleaning decisions are logged in the supplement.
+Mention that the layers come from the same spot, so they are not independent. Genus lists differ between years partly because of naming and identification detail, which is one reason each year is analyzed separately; the one analysis that compares years was repeated on only the genera found in both. The six animals without a genus were all at one station in 2011. All cleaning decisions are logged in the supplement.
 :::
 
 ## Putting a number on "how different"

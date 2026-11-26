@@ -25,10 +25,10 @@ clean_log <- read_csv("outputs/tables/data_cleaning_log.csv", show_col_types = F
 
 - 2010 is percentages, 2011 is counts (about 100 animals per sample). So we can compare composition, not abundance.
 - Two layers per station are the same spot, so we averaged them for the community analyses. 9 stations per year.
-- Analysis is at genus level. Genus lists differ between years (spelling, how far down animals were identified), so each year is analysed on its own with its own controls. The one test that compares years was repeated on only the 56 genera found in both years (same conclusions).
+- Analysis is at genus level. Genus lists differ between years (spelling, how far down animals were identified), so each year is analyzed on its own with its own controls. The one test that compares years was repeated on only the 56 genera found in both years (same conclusions).
 - 90 rows in the genus table have no genus, but only 6 animals are in them (all at D040S in 2011). We dropped them and rescaled each layer to 100 percent.
 - 2010 MI row in the workbook repeats one value, looks like a copy error. We recalculated MI. Not used in the main analyses anyway.
-- Hydrocarbon and metal values jump a lot between years (for example PAH44 at the control stations goes from about 5 to about 400), maybe units or methods. We use Al, Ba, PAH44 and TPH, and analyse each year on its own, with the PCA done within a year. Mud and TOC are not used.
+- Hydrocarbon and metal values jump a lot between years (for example PAH44 at the control stations goes from about 5 to about 400), maybe units or methods. We use Al, Ba, PAH44 and TPH, and analyze each year on its own, with the PCA done within a year. Mud and TOC are not used.
 - Full cleaning log below (Table S1).
 
 ```{r cleaning-log}
@@ -40,7 +40,7 @@ clean_log |>
 
 ## Methods, one line each (what it is, why we used it)
 
-- **Percent, layer average, genus level, square root, each year on its own.** Percent is the only scale 2010 and 2011 share. Averaging layers avoids pretending we have 36 stations. Genus level carries more ecological information, and analysing each year separately stops naming differences between years looking like change. Square root keeps a few big genera from deciding everything (a log would over-boost rare ones, no transform lets one genus dominate). Also ran it untransformed.
+- **Percent, layer average, genus level, square root, each year on its own.** Percent is the only scale 2010 and 2011 share. Averaging layers avoids pretending we have 36 stations. Genus level carries more ecological information, and analyzing each year separately stops naming differences between years looking like change. Square root keeps a few big genera from deciding everything (a log would over-boost rare ones, no transform lets one genus dominate). Also ran it untransformed.
 - **Bray-Curtis.** One number from 0 to 1 for how different two communities are. Ignores genera missing from both samples, which Euclidean distance doesn't. Standard for community data. Calculated per year.
 - **NMDS.** A map so similar stations sit close together. For looking, not testing. Used because it works from the dissimilarities and only needs their rank order. Stress 0.09 (2010) and 0.06 (2011), fine for the broad layout.
 - **Environmental PCA and PCoA with envfit.** Bray-Curtis is for community data, so the four environmental variables (Al, log Ba, log PAH44, log TPH, standardized) go into a PCA instead, per year. PC1 and PC2 are entered in the PERMANOVA next to impact. A PCoA of the Bray-Curtis matrix with each variable fitted as an arrow (`envfit`, 9,999 permutations) ties the chemistry directly to the community distances. With 9 stations, impact plus 2 PCs leaves 4 residual df, so this is exploratory. Impact and the hydrocarbons are strongly tied together.
