@@ -24,10 +24,11 @@ clean_log <- read_csv("outputs/tables/data_cleaning_log.csv", show_col_types = F
 ## Data notes
 
 - 2010 is percentages, 2011 is counts (about 100 animals per sample). So we can compare composition, not abundance.
-- Two layers per station are the same spot, so we averaged them. 9 stations x 2 years = 18 observations.
-- Genus lists differ between years (spelling, how far down animals were identified), so years are compared at family level.
+- Two layers per station are the same spot, so we averaged them for the community analyses. 9 stations per year.
+- Analysis is at genus level. Genus lists differ between years (spelling, how far down animals were identified), so each year is analysed on its own with its own controls. The one test that compares years was repeated on only the 56 genera found in both years (same conclusions).
+- 90 rows in the genus table have no genus, but only 6 animals are in them (all at D040S in 2011). We dropped them and rescaled each layer to 100 percent.
 - 2010 MI row in the workbook repeats one value, looks like a copy error. We recalculated MI. Not used in the main analyses anyway.
-- Hydrocarbon and metal values jump a lot between years, maybe units. Didn't use them.
+- Hydrocarbon and metal values jump a lot between years (for example PAH44 at the control stations goes from about 5 to about 400), maybe units or methods. We use Al, Ba, PAH44 and TPH, and analyse each year on its own, with the PCA done within a year. Mud and TOC are not used.
 - Full cleaning log below (Table S1).
 
 ```{r cleaning-log}
@@ -39,17 +40,19 @@ clean_log |>
 
 ## Methods, one line each (what it is, why we used it)
 
-- **Percent, layer average, family level, square root.** Percent is the only scale 2010 and 2011 share. Averaging layers avoids pretending we have 36 stations. Family level stops naming differences looking like change. Square root keeps a few big families from deciding everything (a log would over-boost rare ones, no transform lets one family dominate). Also ran it untransformed.
-- **Bray-Curtis.** One number from 0 to 1 for how different two communities are. Ignores families missing from both samples, which Euclidean distance doesn't. Standard for community data.
-- **NMDS.** A map so similar stations sit close together. For looking, not testing. Used instead of PCA because it works from the dissimilarities and only needs their rank order. Stress 0.11, fine for the broad layout.
-- **PERMANOVA.** Do impact level or year separate the communities more than shuffled labels do? Used instead of ANOVA because we have dozens of correlated, zero-heavy families. Impact never changes within a station, so impact = shuffle whole stations, year and impact x year = shuffle years within a station. Dispersion check because PERMANOVA can confuse spread with position.
-- **Distance to controls + mixed model.** Distance = average dissimilarity to the 3 controls. Background = how different controls are from each other (recovery means reaching that, not zero). Gap = distance minus background, because the background moved between years. Station is a random effect so one station's two points aren't counted as independent. REML for the variance. Only 12 observations, basically a paired comparison, so wide intervals.
+- **Percent, layer average, genus level, square root, each year on its own.** Percent is the only scale 2010 and 2011 share. Averaging layers avoids pretending we have 36 stations. Genus level carries more ecological information, and analysing each year separately stops naming differences between years looking like change. Square root keeps a few big genera from deciding everything (a log would over-boost rare ones, no transform lets one genus dominate). Also ran it untransformed.
+- **Bray-Curtis.** One number from 0 to 1 for how different two communities are. Ignores genera missing from both samples, which Euclidean distance doesn't. Standard for community data. Calculated per year.
+- **NMDS.** A map so similar stations sit close together. For looking, not testing. Used because it works from the dissimilarities and only needs their rank order. Stress 0.09 (2010) and 0.06 (2011), fine for the broad layout.
+- **Environmental PCA and PCoA with envfit.** Bray-Curtis is for community data, so the four environmental variables (Al, log Ba, log PAH44, log TPH, standardized) go into a PCA instead, per year. PC1 and PC2 are entered in the PERMANOVA next to impact. A PCoA of the Bray-Curtis matrix with each variable fitted as an arrow (`envfit`, 9,999 permutations) ties the chemistry directly to the community distances. With 9 stations, impact plus 2 PCs leaves 4 residual df, so this is exploratory. Impact and the hydrocarbons are strongly tied together.
+- **PERMANOVA.** Do impact level or the environmental axes separate the communities more than shuffled labels do? Used instead of ANOVA because we have dozens of correlated, zero-heavy genera. Per year we shuffle whole stations. For the two year test, year and impact x year = shuffle years within a station (impact never changes within a station). Marginal tests when several terms are in the model. Dispersion check because PERMANOVA can confuse spread with position.
+- **Distance to controls + mixed model.** Distance = average dissimilarity to the 3 controls (same year and layer). Background = how different controls are from each other (recovery means reaching that, not zero). Gap = distance minus background, because the background moved between years. Within each year, gap ~ impact + layer with station as a random effect, since the two layers of a station come from the same spot. Then one model for both years gives the change in gap per year. REML for the variance. Only 6 impacted stations, basically a paired comparison, so wide intervals.
 - **Colonizer model (beta binomial, ML).** Colonizers (c-p 1) out of all animals per station-year. Beta binomial, not binomial, because stations of the same impact level differ more than counting error allows (AIC 147 vs 200). Logistic link so effects read as odds ratios. Wrote the likelihood by hand, fit with `optim`, profile intervals because the likelihood is lopsided with 18 points. Refit with the 2010 sample sizes halved and doubled, no real change.
 
 ## Left out, and why
 
 - State-space model from the proposal: two years can't separate real change from measurement error.
-- Environmental variables: scales look different across years.
+- Mud and TOC: we focused on Al, Ba, PAH44 and TPH.
+- Family level analysis: the first version of the work (scripts 02 and 03) used families. It is kept as a sensitivity check, and gave the same overall picture.
 - MI and ITD: calculated from the same genus data, so nothing new.
 - No multiple comparison correction. The colonizer question came from looking at the data, so its intervals describe fit, they are not a confirmatory test.
 
@@ -57,5 +60,5 @@ clean_log |>
 
 - What, even small, differed between 2010 and 2011 (sieve, subsampling, who identified, counting)? The controls shifted as much as the impacted stations.
 - Were these stations sampled again after 2011?
-- What units are the hydrocarbon and metal values in each year?
+- What units and methods were used for the hydrocarbon and metal values in each year? The control stations differ a lot between years (for example PAH44).
 - Can the cleaned data go on a public GitHub repo, pending the grant and her advisors?

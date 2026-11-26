@@ -29,19 +29,21 @@ library(dplyr)
 library(knitr)
 
 # Render from the project root so these relative paths work
-within  <- read_csv("outputs/tables/permanova_within_station.csv", show_col_types = FALSE)
-between <- read_csv("outputs/tables/permanova_impact_between.csv", show_col_types = FALSE)
-dmodel  <- read_csv("outputs/tables/distance_model_effects.csv", show_col_types = FALSE)
+pby     <- read_csv("outputs/tables/genus_permanova_by_year.csv", show_col_types = FALSE)
+pooled  <- read_csv("outputs/tables/genus_permanova_pooled.csv", show_col_types = FALSE)
+envfit  <- read_csv("outputs/tables/genus_pcoa_envfit.csv", show_col_types = FALSE)
+gapy    <- read_csv("outputs/tables/genus_gap_models_by_year.csv", show_col_types = FALSE)
+gapp    <- read_csv("outputs/tables/genus_gap_model_pooled.csv", show_col_types = FALSE)
 cp1g    <- read_csv("outputs/tables/cp1_genera_at_hi.csv", show_col_types = FALSE)
 est     <- read_csv("outputs/tables/colonizer_model_estimates.csv", show_col_types = FALSE)
 fitted  <- read_csv("outputs/tables/colonizer_model_fitted.csv", show_col_types = FALSE)
 cp_st   <- read_csv("outputs/tables/cp_composition_stations.csv", show_col_types = FALSE) |>
   summarise(m = mean(pct), .by = c(year, impact, cp))
 
-pick <- function(df, tr, trm) df |> filter(transform == tr, term == trm)
-yr  <- pick(within, "sqrt", "year_f")
-ixn <- pick(within, "sqrt", "impact:year_f")
-imp <- pick(between, "sqrt", "Model")
+pool_all <- pooled |> filter(genera == "all genera")
+yr  <- pool_all |> filter(term == "year_f")
+ixn <- pool_all |> filter(term == "impact:year_f")
+gpool <- function(trm, tr = "sqrt") gapp |> filter(transform == tr, term == trm)
 e_  <- function(prefix) est[startsWith(est$parameter, prefix), ]
 cpv <- function(y, g, k) cp_st$m[cp_st$year == y & cp_st$impact == g & cp_st$cp == k]
 fp  <- function(g, y) 100 * fitted$p[fitted$impact == g & fitted$year == y]
@@ -75,12 +77,13 @@ Explain that two healthy sites are never identical, so recovery has to be measur
 
 - Nine stations: 3 heavily impacted (HI), 3 moderately impacted (MI), 3 unimpacted controls (NI)
 - Sampled in 2010 and 2011, two sediment layers each (0 to 1 cm and 1 to 3 cm)
-- Nematodes counted and identified, compared at family level
-- Layers averaged, so each station in each year is one observation (18 in total)
+- Nematodes counted and identified to genus (a handful of animals only to family were set aside)
+- Four sediment measurements per station and year: aluminum (Al), barium (Ba), PAH44, and total petroleum hydrocarbons (TPH)
+- Each year analysed on its own, with its own controls; layers averaged, so 9 stations per year
 - 2010 values are percentages and 2011 values are counts, so we compare composition, not abundance
 
 ::: notes
-Mention that the layers come from the same spot, so they are not independent. Mention the family level choice: the genus lists differ between years partly because of naming and identification detail. All cleaning decisions are logged in the report appendix.
+Mention that the layers come from the same spot, so they are not independent. Genus lists differ between years partly because of naming and identification detail, which is one reason each year is analysed separately; the one analysis that compares years was repeated on only the genera found in both. The six animals without a genus were all at one station in 2011. All cleaning decisions are logged in the supplement.
 :::
 
 ## Putting a number on "how different"
@@ -91,53 +94,67 @@ $$
 BC_{ij} = \frac{\sum_k |y_{ik} - y_{jk}|}{\sum_k (y_{ik} + y_{jk})}
 $$
 
-- $y_{ik}$ is the square root of the percentage of family $k$ in station-year $i$
-- 0 means the same mix of families, 1 means no families in common
-- We draw all the distances as a two dimensional map (NMDS)
+- $y_{ik}$ is the square root of the percentage of genus $k$ at station $i$ in a given year
+- 0 means the same mix of genera, 1 means no genera in common
+- Calculated separately for 2010 and 2011, then drawn as a two dimensional map (NMDS)
 
 ::: notes
-Square root transformation stops a few very common families from dominating. We repeated every analysis on untransformed data as a check and say where the two disagree.
+Square root transformation stops a few very common genera from dominating. We repeated every analysis on untransformed data as a check and say where the two disagree.
 :::
 
-## Communities separate by impact, and everything shifts together
+## Communities separate by impact within each year
 
-![](outputs/figures/nmds_trajectories.png){fig-align="center" height="390"}
+![](outputs/figures/genus_nmds_by_year.png){fig-align="center" height="390"}
 
-Arrows run from 2010 to 2011. Heavily impacted stations sit left, controls right. Almost every station moved the same way, including the controls.
+Genus level maps, one per year, so the axes differ between panels. Within a year, stations of the same impact level sit near each other.
 
 ::: notes
-This is the key picture. Two things at once: impact level is clearly tied to community composition, and there is a shared shift between years. The heavily impacted arrows run parallel to the others, not toward the controls.
+Each year is its own analysis, so positions cannot be compared across the two panels. Whether communities changed between years is tested separately, on the PERMANOVA slide.
 :::
 
 ## Are the patterns more than chance? (PERMANOVA)
 
 ```{r permanova}
 bind_rows(
-  imp |> mutate(Test = "Impact level"),
-  yr  |> mutate(Test = "Year"),
-  ixn |> mutate(Test = "Impact x year")
+  pby |> filter(transform == "sqrt", model == "impact", term == "Model") |>
+    transmute(Test = paste("Impact level,", year), `R squared` = R2, p = `Pr(>F)`),
+  yr  |> transmute(Test = "Year (both years)", `R squared` = R2, p = `Pr(>F)`),
+  ixn |> transmute(Test = "Impact x year (both years)", `R squared` = R2, p = `Pr(>F)`)
 ) |>
-  transmute(Test, `R squared` = R2, p = fmt_p(`Pr(>F)`)) |>
+  mutate(p = fmt_p(p)) |>
   kable(digits = 2)
 ```
 
-- Impact level and year both matter
-- The change over the year did not clearly differ by impact level, and that is the term most relevant to recovery
+- Impact level separates communities clearly in 2011 and borderline in 2010 (the 2010 result depends on the transformation)
+- Communities changed between years, but the change did not clearly differ by impact level, and that is the term most relevant to recovery
 - Three stations per group means low power
 
 ::: notes
-Explain PERMANOVA as shuffling labels and asking how often a shuffle separates the communities as well as the real labels. Impact is tested by shuffling whole stations, and year within stations, because impact never changes within a station.
+Explain PERMANOVA as shuffling labels and asking how often a shuffle separates the communities as well as the real labels. Per year we shuffle whole stations. For the two year test, year and impact x year are tested by shuffling years within stations, because impact never changes within a station.
+:::
+
+## Does sediment chemistry line up with the communities?
+
+![](outputs/figures/genus_pcoa_env.png){fig-align="center" height="360"}
+
+- PCoA of the Bray-Curtis distances, with Al, Ba, PAH44 and TPH fitted as arrows
+- Ba, PAH44 and TPH line up with the community axes in both years (R squared `r sprintf("%.2f", min(envfit$r2[envfit$variable != "Al"]))` to `r sprintf("%.2f", max(envfit$r2[envfit$variable != "Al"]))`); Al does not
+- Impact class and the hydrocarbon gradient overlap so much that nine stations cannot separate them
+
+::: notes
+The hydrocarbon variables load together on one PCA axis, so they act as a single gradient. Entering impact level and the two environmental PCs together in one PERMANOVA left nothing significant on its own, with only four residual degrees of freedom, so we treat that as exploratory. The environmental values also differ a lot between years at the control stations, so the PCA is done within each year.
 :::
 
 ## Distance to the controls
 
-![](outputs/figures/distance_to_control.png){fig-align="center" height="360"}
+![](outputs/figures/genus_gap_by_year.png){fig-align="center" height="360"}
 
-- Distance = average dissimilarity to the three controls; dashed line is how different controls are from each other
-- No estimate points toward recovery; with square root data the gap grew, but not with untransformed data
+- Gap = average dissimilarity to the three controls minus how different the controls are from each other (zero = as close as controls are to each other)
+- Every impacted station had a larger gap in 2011; HI gap grew about `r sprintf("%.2f", gpool("year0")$estimate)` per year (95% interval `r sprintf("%.2f", gpool("year0")$lower)` to `r sprintf("%.2f", gpool("year0")$upper)`)
+- With untransformed data the estimate is `r sprintf("%.2f", gpool("year0", "raw")$estimate)` and the interval includes zero
 
 ::: notes
-Report the number carefully: the gap increased by about `r sprintf("%.2f", dmodel$estimate[dmodel$transform == "sqrt" & dmodel$response == "gap" & dmodel$effect == "Change per year, HI and MI pooled"])` per year under square root data, but the untransformed result includes zero. So we say we found no evidence of moving closer, not that they moved away. Twelve observations, six stations.
+A mixed model within each year, with station as a random effect and the two layers as repeated measures, then one model for both years. Report the number carefully: the direction is the same in both versions and none points toward recovery, but the size of the increase depends on the transformation. So we say we found no evidence of moving closer. Twelve observations per year, six stations.
 :::
 
 ## What kind of nematode differs? Colonizers
@@ -229,14 +246,14 @@ Be upfront that the shared shift between years is the main limitation. Two years
 
 ## Where this goes next
 
-- Questions about the dataset: were sampling and identification the same in both years, and what units were used for hydrocarbons and metals?
+- Questions about the dataset: were sampling and identification the same in both years, and were hydrocarbons and metals measured the same way (the control values differ a lot between years)?
 - Do later surveys exist (for example 2023)? That would allow a recovery rate to be estimated and tested against a prediction
 - Compare *Halomonhystera* and the other differing families with published responses to oil
 
 **Questions?**
 
 ::: {.aside}
-Paper (draft): *Deep-sea nematode communities in the first year after the Deepwater Horizon spill: little evidence of recovery and a high share of colonizers at heavily impacted sites*. Elizarraraz, Murillo and Irvin.
+Paper (draft): *Deep-sea nematode communities in the first year after the Deepwater Horizon spill*. Elizarraraz, Murillo and Irvin.
 :::
 
 ::: notes

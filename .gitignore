@@ -7,15 +7,23 @@
 # Quarto
 .quarto/
 *_files/
+*.knit.md
 
-# Rendered documents (shared through Box, rebuilt from the .qmd files)
-/nematode_recovery_paper*.docx
-/nematode_recovery_supplement.docx
-/nematode_recovery_slides.html
+# Data are proprietary: code only goes to GitHub. Raw, processed and derived
+# tables stay local and are rebuilt by the scripts (folders kept with .gitkeep).
+data/raw/*
+data/processed/*
+outputs/tables/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!outputs/tables/.gitkeep
+
+# Rendered documents that are not the current versions
+/nematode_recovery_paper_print.docx
 /nematode_recovery_*.pdf
+/Draft Nematode project.docx
 
-# Data and course material that stay local
-data/raw/*.xlsx
+# Course material that stays local
 docs/pitch_notes.pdf
 docs/*REVISED*
 
@@ -26,5 +34,5 @@ Thumbs.db
 desktop.ini
 ~$*
 nul
-/meeting_cheatsheet.docx
+/meeting_cheatsheet.*
 /images/
